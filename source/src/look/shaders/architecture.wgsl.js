@@ -84,6 +84,12 @@ struct ArchitectureVaryings {
   surface.occlusion = input.normalAndOcclusion.w;
   var normal = geometricNormal;
 
+  // a butter lamp flame glows by itself, flickering
+  if (materialId == ${material.flame}u) {
+    let flicker = 0.75 + 0.25 * sin(frame.cameraPositionAndTime.w * 17.0 + input.worldPosition.x * 40.0) * sin(frame.cameraPositionAndTime.w * 7.3 + input.worldPosition.z * 30.0);
+    return toneMapToDisplay(baseColor * flicker);
+  }
+
   switch materialId {
     case ${material.brick}u, ${material.glazedBrick}u: {
       let brick = brickWall(coordinates, coordinatesDx, coordinatesDy, input.worldPosition.y, baseColor, weathering);

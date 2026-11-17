@@ -21,6 +21,8 @@ export const material = {
   redClay: 12, // the red clay (rato mato) plastered on the lower walls and pidhi of mud houses
   earth: 13, // the swept earth of a house's aangan
   greenery: 14, // the tulsi plant on its pedestal
+  marigold: 15, // garlands and loose flowers at the shrines
+  flame: 16, // butter lamp flames: they glow and flicker instead of being lit
 };
 
 // Each row: base colour (linear red, green, blue), roughness, metalness, weathering (dirt, moss and wear).
@@ -40,4 +42,6 @@ export const materialTable = [
   [0.42, 0.15, 0.085, 0.95, 0, 0.7], // red clay
   [0.34, 0.23, 0.14, 0.95, 0, 0.6], // swept earth
   [0.12, 0.24, 0.07, 0.8, 0, 0.3], // tulsi leaves
+  [0.85, 0.38, 0.03, 0.7, 0, 0.1], // marigold
+  [4.0, 2.1, 0.6, 1, 0, 0], // flame (its glow, brighter than any lit colour)
 ];

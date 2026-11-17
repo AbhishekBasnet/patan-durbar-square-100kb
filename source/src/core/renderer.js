@@ -9,6 +9,7 @@ import { architectureWgsl } from '../look/shaders/architecture.wgsl.js';
 import { waterWgsl, rippleEventCapacity, waveSourceCapacity } from '../look/shaders/water.wgsl.js';
 import { postProcessWgsl } from '../look/shaders/postProcess.wgsl.js';
 import { paintSurfaceTextures, surfaceTextureSize } from '../look/surfaceTextures.js';
+import { dustWgsl, smokeSourceCapacity } from '../look/shaders/dust.wgsl.js';
 
 export const frameUniformFloatCount = 100; // matches FrameUniforms in frameUniforms.wgsl.js
 export const sunShadowMatrixOffset = 64;
@@ -30,8 +31,9 @@ export async function openGpu() {
 }
 
 // detailSelector (lod.js) says which chunks and levels to draw each frame, and with what cross-fade;
-// reflectionSelector does the same for the mirrored scene. waterField (square/water.js) holds the water.
-export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices, detailSelector, reflectionSelector, waterField }) {
+// reflectionSelector does the same for the mirrored scene. waterField (square/water.js) holds the water;
+// smokeSources (life/shrineOfferings.js) are where the incense smoke rises.
+export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices, detailSelector, reflectionSelector, waterField, smokeSources }) {
   const context = canvas.getContext('webgpu');
   const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
   const sampleCount = quality.antialiasingSamples;
@@ -69,8 +71,9 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const sceneBindGroupLayout = device.createBindGroupLayout({
     entries: [
       { binding: 0, visibility: allStages, buffer: {} },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
-      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
+      // the sun's shadow map is read in the vertex stage too (dust motes glint only in sunlight)
+      { binding: 1, visibility: allStages, texture: { sampleType: 'depth' } },
+      { binding: 2, visibility: allStages, sampler: { type: 'comparison' } },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
       { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { viewDimension: '2d-array' } },
@@ -162,6 +165,20 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const waterUniformBuffer = device.createBuffer({ size: waterUniforms.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const reflectionSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
   let waterBindGroup; // rebuilt with the reflection image on resize
+
+  // dust motes and incense smoke: soft dots, all worked out on the GPU from their index
+  const smokeParticlesPerSource = 40;
+  const particleBindGroupLayout = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: {} }] });
+  const particleSettings = new Float32Array((smokeSourceCapacity + 1) * 4);
+  smokeSources.slice(0, smokeSourceCapacity).forEach((source, index) => particleSettings.set(source, index * 4));
+  particleSettings.set([quality.dustMoteCount, smokeParticlesPerSource, Math.min(smokeSources.length, smokeSourceCapacity)], smokeSourceCapacity * 4);
+  const particleBindGroup = device.createBindGroup({
+    layout: particleBindGroupLayout, entries: [{ binding: 0, resource: { buffer: createBufferWithData(particleSettings, GPUBufferUsage.UNIFORM) } }],
+  });
+  const particleCount = quality.dustMoteCount + smokeParticlesPerSource * Math.min(smokeSources.length, smokeSourceCapacity);
+  const particlePipeline = createScenePipeline(dustWgsl, 'particleVertex', 'particleFragment', [], waterDepth, 'none', { shadowTapsPerAxis: 1 }, {
+    layout: device.createPipelineLayout({ bindGroupLayouts: [sceneBindGroupLayout, particleBindGroupLayout] }), blend: premultipliedBlend,
+  });
 
   // the film look: the finished frame is drawn once more through postProcess.wgsl.js (not on Low)
   const hasFilmLook = quality.hasFilmLook;
@@ -353,6 +370,9 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
     pass.setPipeline(skyPipeline);
     pass.draw(3);
     drawWater(pass);
+    pass.setPipeline(particlePipeline);
+    pass.setBindGroup(1, particleBindGroup);
+    pass.draw(6, particleCount);
     pass.end();
     if (withFilmLook) {
       postColorAttachment.view = canvasView;

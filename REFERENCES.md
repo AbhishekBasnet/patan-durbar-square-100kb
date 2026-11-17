@@ -73,6 +73,14 @@ The palace wings use the same generator as the houses: storeys with glazed bands
 | The puddle in front of Krishna Mandir | The brief: a shower about an hour ago | One big puddle, about 7 x 4 m, to show the reflections. The user chose this over scattered puddles. Its spot is **(plausible)**. |
 | Manga Hiti water | Photos of Manga Hiti | Three streams from the makara spouts into knee-deep water filling the pit floor. The lowest steps and the trough are under water. The water level is **(plausible)**, chosen by the user. |
 
+## Sky and atmosphere
+
+| Item | Based on | Notes |
+|---|---|---|
+| Snow peaks to the north | The Ganesh Himal and Langtang ranges, visible from Patan on clear days | Their outline is invented **(plausible)**; only the direction and the golden-hour colour are meant to be right. |
+| Sunbeams, dust, glow on gilding | Period photos and film of the valley at golden hour | Part of the film look. |
+| Offerings at the temple doors | Everyday puja in Patan | Marigold garlands across the doorways, butter lamps, rice, tika powder and incense. Placement is **(plausible)**. |
+
 ## Street life
 
 The user chose to keep the square empty: no people, vendors, animals or vehicles. Sound is only wind, bells and water: a slow gusting wind, eave bells chiming in the gusts, an occasional temple bell and the deep Taleju bell, and Manga Hiti's running water.

@@ -12,6 +12,7 @@ import { buildSurroundings } from './square/surroundings.js';
 import { addPaving } from './square/paving.js';
 import { createWaterField } from './square/water.js';
 import { createSoundscape } from './audio/soundscape.js';
+import { addShrineOfferings, incenseSmokeSources } from './life/shrineOfferings.js';
 import { buildMonuments } from './monuments/allMonuments.js';
 import { MeshBuilder } from './core/meshBuilder.js';
 import { writeLightingUniforms, computeLightMapMatrices } from './look/lighting.js';
@@ -45,6 +46,7 @@ async function start() {
   const architecture = new MeshBuilder();
   const { solidBlocks, groundHoles } = buildMonuments(architecture);
   const houseBlocks = buildSurroundings(architecture);
+  addShrineOfferings(architecture);
   addPaving(architecture, groundHoles);
   const camera = createWalkingCamera(buildColliders([...solidBlocks, ...houseBlocks]), squareBounds, groundHoles);
   const lightMapMatrices = computeLightMapMatrices();
@@ -57,7 +59,7 @@ async function start() {
   const waterField = createWaterField(quality);
   const soundscape = createSoundscape(camera);
   const renderer = createRenderer({
-    device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, waterField,
+    device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, waterField, smokeSources: incenseSmokeSources(),
   });
   renderer.measureGpuTime = canMeasureGpuTime; // always on: the resolution scaler reads it
   const resolutionScaler = createResolutionScaler({ quality, renderer, canMeasureGpuTime });

@@ -17,6 +17,7 @@ const qualityPresets = {
     skyOcclusionTapCount: 4,
     hasFilmLook: true,
     surfaceAnisotropy: 16, // how sharp brick and paving stay on surfaces seen at a slant
+    dustMoteCount: 1400, // specks of dust glinting in the sunbeams
     reflectionScale: 0.5, // water reflections at half the render size, per side
     rippleEventCapacity: 32,
   },
@@ -31,6 +32,7 @@ const qualityPresets = {
     skyOcclusionTapCount: 4,
     hasFilmLook: true,
     surfaceAnisotropy: 8,
+    dustMoteCount: 800,
     reflectionScale: 0.33,
     rippleEventCapacity: 16,
   },
@@ -45,6 +47,7 @@ const qualityPresets = {
     skyOcclusionTapCount: 2,
     hasFilmLook: false, // no film grain pass
     surfaceAnisotropy: 1,
+    dustMoteCount: 0,
     reflectionScale: 0, // no reflection pass: water mirrors the sky and a tint of the buildings
     rippleEventCapacity: 8,
   },
