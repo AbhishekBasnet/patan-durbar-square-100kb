@@ -1,5 +1,5 @@
-// Manga Hiti: the sunken stone water spout at the north end, reached by a flight of steps, with three makara
-// heads on its back wall (their water arrives in step 5); and the two Mani Mandap pavilions beside it,
+// Manga Hiti: the sunken stone water spout (dhunge dhara) at the north end, reached by a flight of steps, with
+// three makara heads on its back wall pouring into knee-deep water; and the two Mani Mandap pavilions beside it,
 // open wooden halls on raised stone platforms. The pit is listed in `holes` so the paving is cut away and
 // you can walk down into it. Depends on statues.js, plinths.js, pagodaRoof.js, roofStruts.js, lod.js, materials.js.
 
@@ -24,21 +24,18 @@ export const mangaHiti = {
   ledgeWidth: 0.7,
   spoutHeightAboveFloor: 1.15,
   spoutSpacing: 2.2,
+  waterDepth: 0.5, // knee deep: the lowest steps and the trough are under water
 };
 
-// The water, in the pit's own frame (puddles.js places it): a stream from each spout's pipe, the pool in the
-// trough, and the water spilled over the floor in front of it.
+// The water, in the pit's own frame (square/water.js places it): a stream from each spout's pipe, and the
+// knee-deep pool filling the floor of the pit.
 export function describeMangaHitiWater() {
-  const pit = mangaHiti, floor = -pit.depth, spoutPipeReach = 0.86 * 0.75, troughTop = floor + 0.4;
+  const pit = mangaHiti, floor = -pit.depth, spoutPipeReach = 0.86 * 0.75, spoutY = floor + pit.spoutHeightAboveFloor - 0.03;
   const streams = [-1, 0, 1].map((spout) => ({
-    x: -pit.halfLength + spoutPipeReach, y: floor + pit.spoutHeightAboveFloor - 0.03, z: spout * pit.spoutSpacing,
-    drop: pit.spoutHeightAboveFloor - 0.45, outflowMetresPerSecond: 0.55,
+    x: -pit.halfLength + spoutPipeReach, y: spoutY, z: spout * pit.spoutSpacing,
+    drop: spoutY - (floor + pit.waterDepth), outflowMetresPerSecond: 0.55,
   }));
-  return {
-    streams,
-    trough: { x: -pit.halfLength + 0.3, y: troughTop - 0.03, z: 0, halfX: 0.27, halfZ: 2.95 },
-    spill: { x: -pit.halfLength + 2.2, y: floor + 0.012, z: 0.4, halfX: 1.5, halfZ: 2.6 },
-  };
+  return { streams, pool: { x: 0, y: floor + pit.waterDepth, z: 0, halfX: pit.halfLength, halfZ: pit.halfWidth } };
 }
 
 export function buildMangaHiti(builder, solids, holes) {

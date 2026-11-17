@@ -2,7 +2,7 @@
 
 A walkable recreation of Patan Durbar Square (Lalitpur, Nepal) as it was on an ordinary afternoon in the mid-1980s. It runs in the browser. Everything is made from code: no images, models or sound files. The whole square is one HTML file.
 
-> **Work in progress: step 5 of 7.** Every monument, the palace and the houses are built, with detail levels by distance. Puddles from a passing shower mirror the temples and ripple under drips and footsteps, and Manga Hiti's spouts run. It holds a steady 60 fps on Medium on Intel Iris Xe (see [PERFORMANCE.md](PERFORMANCE.md)). Next: street life.
+> **Work in progress: step 5 of 7.** Every monument, the palace and the houses are built, with detail levels by distance. One big puddle from a passing shower mirrors Krishna Mandir, and Manga Hiti's spouts pour into knee-deep water you can wade into. It holds a steady 60 fps on Medium on Intel Iris Xe (see [PERFORMANCE.md](PERFORMANCE.md)). Next: street life.
 
 ## Try it
 
@@ -35,7 +35,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **82.4 KB** minified, 31.0 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **81.6 KB** minified, 30.8 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -67,7 +67,7 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/monuments/*.js` | One file per monument, mostly numbers: Bhimsen, Vishwanath, Krishna Mandir, Char Narayan, Hari Shankar, the octagonal Krishna temple, the Garuda and King Yoganarendra pillars, the Taleju bell, Manga Hiti with the Mani Mandaps, the royal palace (three chowks, the golden gate, Tusha Hiti), Degutale and the Taleju tower |
 | `src/monuments/allMonuments.js` | Places every monument from the layout, collects its collision and its sunken pits |
 | `src/square/paving.js` | The ground, with the pits cut out |
-| `src/square/puddles.js` | Where the puddles lie; the ripple event pool fed by drips, the spout streams and footsteps |
+| `src/square/water.js` | The puddle and Manga Hiti's pool and streams; the ripple event pool fed by the streams and footsteps |
 | `src/square/layout.js` | The map: every monument's position, facing and size, and the 6 viewpoints |
 | `src/square/blocks.js` | Solid blocks for collision, placed relative to a monument |
 | `src/square/surroundings.js` | The houses around the square, with alleys |
@@ -77,7 +77,7 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/look/shaders/lighting.wgsl.js` | Sun shadows, sky occlusion under eaves, bounce light, highlights |
 | `src/look/shaders/brick, wood, stone, gold, tile .wgsl.js` | One file per material look |
 | `src/look/shaders/architecture.wgsl.js` | Picks the material per vertex and lights it |
-| `src/look/shaders/water.wgsl.js` | Puddles and Manga Hiti's water: outlines, Fresnel reflections, ripples, wind, floating petals, the spout streams |
+| `src/look/shaders/water.wgsl.js` | The puddle and Manga Hiti's water: outlines, Fresnel reflections, ripples, wind, a floating petal, the spout streams |
 | `src/look/shaders/sky.wgsl.js`, `noise.wgsl.js` | Sky, shared noise |
 
 ## Easy first tweaks
@@ -88,7 +88,7 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | Sun colour | `goldenHourSunColor` in `src/look/lighting.js` |
 | Walking speed | `walkingSpeedMetresPerSecond` in `src/core/camera.js` |
 | Haze | `hazeDensityPerMetre` in `src/look/lighting.js` |
-| Wind on the puddles | `windGustStrength` in `src/square/puddles.js` (0 for still air) |
+| Wind on the water | `windGustStrength` in `src/square/water.js` (0 for still water) |
 | Detail switching distances | `lodSwitchDistances` in `src/core/lod.js` |
 | Move or turn a monument | its row (`x`, `z`, `facingDegrees`) in `src/square/layout.js` |
 
@@ -102,7 +102,7 @@ Crowd size, number of vendors and film look strength arrive in later steps.
 | 2. Lighting, paving, architecture parts (one pagoda, Krishna Mandir) | done |
 | 3. All monuments, palace, houses | done |
 | 4. Detail levels, performance on Medium | done |
-| 5. Puddles, Manga Hiti water | done |
+| 5. Water: one showcase puddle, knee-deep water at Manga Hiti | done |
 | 6. People, vendors, animals, vehicles, sound | |
 | 7. Film look, polish, verification | |
 

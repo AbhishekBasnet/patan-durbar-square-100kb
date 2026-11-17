@@ -1,6 +1,6 @@
 // The ground of the square: one wide sheet of brick paving (its herringbone pattern and worn paths are drawn
 // by brick.wgsl.js), split into tiles so distant parts stay precise, with the sunken pits (Manga Hiti,
-// Tusha Hiti) cut out of it. Drains and puddle dips come in step 5.
+// Tusha Hiti) cut out of it.
 // Depends on materials.js and layout.js.
 
 import { material } from '../look/materials.js';

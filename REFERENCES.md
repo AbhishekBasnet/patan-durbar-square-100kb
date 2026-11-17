@@ -70,9 +70,9 @@ The palace wings use the same generator as the houses: storeys with glazed bands
 
 | Item | Based on | Notes |
 |---|---|---|
-| Puddles | The brief: a shower about an hour ago | About 16 puddles: at the feet of plinths, under dripping palace and house eaves, in worn dips, and in and around Manga Hiti's trough. Exact spots and sizes are **(plausible)**. |
-| Manga Hiti water | Photos of Manga Hiti | Three streams from the makara spouts into a stone trough, with water spilled on the pit floor. The trough's shape is **(plausible)**. |
-| Floating things | Marigold offerings, fallen leaves, straw from vendors' mats | One per puddle **(plausible)**. |
+| The puddle in front of Krishna Mandir | The brief: a shower about an hour ago | One big puddle, about 7 x 4 m, to show the reflections. The user chose this over scattered puddles. Its spot is **(plausible)**. |
+| Manga Hiti water | Photos of Manga Hiti | Three streams from the makara spouts into knee-deep water filling the pit floor. The lowest steps and the trough are under water. The water level is **(plausible)**, chosen by the user. |
+| Floating things | Marigold offerings, fallen leaves, straw | One on each water surface **(plausible)**. |
 
 ## People, props, animals
 

@@ -16,6 +16,7 @@ struct FrameUniforms {
   screenSize: vec4f, // width, height, 1 / width, 1 / height
   sunShadowMatrix: mat4x4f, // world to the sun's shadow map
   skyOcclusionMatrix: mat4x4f, // world to the top-down height map
+  mirrorPlane: vec4f, // height of the water surface the reflection pass mirrors in, 0, 0, 0
 }
 @group(0) @binding(0) var<uniform> frame: FrameUniforms;
 

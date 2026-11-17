@@ -34,12 +34,17 @@ At full clock, Medium uses about 8 ms of the 14 ms budget. That leaves about 6 m
 - **Per-preset filtering:** 3x3 shadow taps on High, 2x2 on Medium, 1 on Low. Sky-occlusion taps go 4, 3, 2.
 - **Automatic resolution scaling (`core/quality.js`):** if the GPU goes over 14 ms, the render resolution drops in steps of 8% per side, down to 70%. If that is still too slow for 5 seconds, the next visit starts one preset lower.
 
-## Step 5 (with puddles, their reflection pass, and Manga Hiti's water)
+## Step 5 (the showcase puddle, Manga Hiti's knee-deep pool, Medium upgraded)
+
+At your request, the scattered street puddles were replaced by one big puddle in front of Krishna Mandir and knee-deep water in Manga Hiti. The GPU time freed went to the temples on Medium:
+- High's 3x3 soft shadows, instead of 2x2
+- full four-tap sky light under the eaves
+- carved detail kept on out to 32 m, instead of 24 m
 
 | Preset | Frame avg / p99 / worst at 60 Hz | GPU avg / p99 / worst at 60 Hz |
 |---|---|---|
-| **Medium** | **16.67 / 16.80 / 16.80 ms** | **9.42 / 12.79 / 14.64 ms** |
+| **Medium** | **16.67 / 16.80 / 16.80 ms** | **10.52 / 12.72 / 13.68 ms** |
 
-Still a steady 60 fps. Uncapped, Medium averages 117 fps (8.55 ms frame, 8.43 ms GPU).
+Steady 60 fps. An earlier run of the same build had one hiccup (p99 33 ms, worst 67 ms) with normal GPU times: a stall outside the GPU in headless Chrome that the rerun did not show. Uncapped, Medium averages 118 fps (8.49 ms frame, 8.41 ms GPU).
 
-The reflection is the scene drawn upside down at far detail into a texture a third of the render size per side. It is drawn only on frames where a puddle is in view. On Low there is no reflection pass: puddles mirror the sky and a tint of the buildings.
+Reflections: the scene is drawn mirrored in the surface of the nearest water in view, at far detail, into a texture a third of the render size per side. The pass is skipped when no water is in view. On Low, water mirrors the sky and a tint of the buildings.

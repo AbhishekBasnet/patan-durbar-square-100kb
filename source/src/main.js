@@ -1,7 +1,7 @@
 // Entry point: opens the GPU, picks the quality preset, builds the square from layout.js, then runs the
 // frame loop and the start menu. Depends on every core/ module, square/ and look/lighting.js.
 
-import { openGpu, createRenderer, frameUniformFloatCount, sunShadowMatrixOffset, skyOcclusionMatrixOffset } from './core/renderer.js';
+import { openGpu, createRenderer, frameUniformFloatCount, sunShadowMatrixOffset, skyOcclusionMatrixOffset, mirrorPlaneOffset } from './core/renderer.js';
 import { pickQuality, storeQuality, qualityNames, createResolutionScaler } from './core/quality.js';
 import { createDetailSelector } from './core/lod.js';
 import { createInput } from './core/input.js';
@@ -10,7 +10,7 @@ import { perspectiveReverseZ, viewFromYawPitch, multiplyMatrices, invertMatrix, 
 import { squareBounds, viewpoints } from './square/layout.js';
 import { buildSurroundings } from './square/surroundings.js';
 import { addPaving } from './square/paving.js';
-import { createPuddleField } from './square/puddles.js';
+import { createWaterField } from './square/water.js';
 import { buildMonuments } from './monuments/allMonuments.js';
 import { MeshBuilder } from './core/meshBuilder.js';
 import { writeLightingUniforms, computeLightMapMatrices } from './look/lighting.js';
@@ -53,9 +53,9 @@ async function start() {
   const detailSelector = createDetailSelector({ chunkBounds, levelRanges, quality });
   const farDetailLevel = 2;
   const reflectionSelector = createDetailSelector({ chunkBounds, levelRanges, quality, fixedLevel: farDetailLevel });
-  const puddleField = createPuddleField(quality);
+  const waterField = createWaterField(quality);
   const renderer = createRenderer({
-    device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, puddleField,
+    device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, waterField,
   });
   renderer.measureGpuTime = canMeasureGpuTime; // always on: the resolution scaler reads it
   const resolutionScaler = createResolutionScaler({ quality, renderer, canMeasureGpuTime });
@@ -64,7 +64,7 @@ async function start() {
   // ---- per-frame state, all preallocated
   const frameUniforms = new Float32Array(frameUniformFloatCount);
   const projection = new Float32Array(16), view = new Float32Array(16), viewProjection = new Float32Array(16), inverseViewProjection = new Float32Array(16);
-  // the same camera mirrored in the water plane (y = 0), for the puddle reflection
+  // the same camera mirrored in the surface of the nearest water in view, for its reflection
   const reflectionUniforms = new Float32Array(frameUniformFloatCount);
   const mirroredViewProjection = reflectionUniforms.subarray(0, 16), mirroredEye = new Float64Array(3);
   writeLightingUniforms(frameUniforms, 36);
@@ -106,20 +106,35 @@ async function start() {
     frameUniforms[61] = renderer.height;
     frameUniforms[62] = 1 / renderer.width;
     frameUniforms[63] = 1 / renderer.height;
-    // mirroring y: the view-projection's y column and the inverse's y row change sign
-    reflectionUniforms.set(frameUniforms);
-    for (let index = 4; index < 8; index++) reflectionUniforms[index] = -reflectionUniforms[index];
-    for (let index = 17; index < 32; index += 4) reflectionUniforms[index] = -reflectionUniforms[index];
-    reflectionUniforms[33] = -reflectionUniforms[33];
-    mirroredEye[0] = camera.eyePosition[0]; mirroredEye[1] = -camera.eyePosition[1]; mirroredEye[2] = camera.eyePosition[2];
   };
 
-  const isAnyPuddleVisible = () => {
-    const bounds = puddleField.puddleBounds;
+  // The water surface to mirror this frame: the nearest water body in view, or NaN when none is.
+  const pickMirrorPlane = () => {
+    const bounds = waterField.bodyBounds;
+    let nearest = Infinity, height = NaN;
     for (let offset = 0; offset < bounds.length; offset += 4) {
-      if (detailSelector.isSphereVisible(bounds[offset], bounds[offset + 1], bounds[offset + 2], bounds[offset + 3])) return true;
+      if (!detailSelector.isSphereVisible(bounds[offset], bounds[offset + 1], bounds[offset + 2], bounds[offset + 3])) continue;
+      const distance = Math.hypot(bounds[offset] - camera.eyePosition[0], bounds[offset + 2] - camera.eyePosition[2]);
+      if (distance < nearest) { nearest = distance; height = bounds[offset + 1]; }
     }
-    return false;
+    return height;
+  };
+
+  // Mirroring in the plane y = h maps y to 2h - y: the view-projection's y column changes sign and adds 2h times
+  // itself to the translation column; the inverse's y row becomes 2h times its w row minus itself.
+  const writeReflectionUniforms = (height) => {
+    reflectionUniforms.set(frameUniforms);
+    for (let row = 0; row < 4; row++) {
+      reflectionUniforms[12 + row] += 2 * height * reflectionUniforms[4 + row];
+      reflectionUniforms[4 + row] = -reflectionUniforms[4 + row];
+    }
+    for (let column = 0; column < 4; column++) {
+      const offset = 16 + column * 4;
+      reflectionUniforms[offset + 1] = 2 * height * reflectionUniforms[offset + 3] - reflectionUniforms[offset + 1];
+    }
+    reflectionUniforms[33] = 2 * height - reflectionUniforms[33];
+    reflectionUniforms[mirrorPlaneOffset] = height;
+    mirroredEye[0] = camera.eyePosition[0]; mirroredEye[1] = reflectionUniforms[33]; mirroredEye[2] = camera.eyePosition[2];
   };
 
   const updateStats = (frameMilliseconds) => {
@@ -145,11 +160,14 @@ async function start() {
     dev?.update(secondsElapsed, frameMilliseconds);
     writeCameraUniforms();
     detailSelector.update(camera.eyePosition, viewProjection);
-    const drawReflection = isAnyPuddleVisible();
-    if (drawReflection) reflectionSelector.update(mirroredEye, mirroredViewProjection);
-    puddleField.update(elapsedSeconds, camera);
+    const mirrorPlaneHeight = quality.reflectionScale > 0 ? pickMirrorPlane() : NaN;
+    if (mirrorPlaneHeight === mirrorPlaneHeight) {
+      writeReflectionUniforms(mirrorPlaneHeight);
+      reflectionSelector.update(mirroredEye, mirroredViewProjection);
+    }
+    waterField.update(elapsedSeconds, camera);
     if (!dev?.isBenchmarking()) resolutionScaler.update(frameMilliseconds);
-    renderer.render(frameUniforms, reflectionUniforms, drawReflection);
+    renderer.render(frameUniforms, reflectionUniforms, mirrorPlaneHeight);
     if (statsVisible) updateStats(frameMilliseconds);
   };
 

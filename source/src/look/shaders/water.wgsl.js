@@ -1,6 +1,6 @@
-// WGSL for all water: the puddles left by the shower and the pools at Manga Hiti (soft irregular outlines,
-// a dark wet rim, Fresnel reflections of the square and sky, muddy or clear depth, rings from drips and
-// footsteps, wind ripples in gusts, floating petals and leaves), and the streams pouring from the spouts.
+// WGSL for all water: the puddle left by the shower and Manga Hiti's pool (a soft irregular outline or a
+// stone basin, a dark wet rim, Fresnel reflections of the square and sky, muddy or clear depth, rings from
+// the streams and footsteps, wind ripples in gusts, a floating petal or leaf), and the streams from the spouts.
 // Depends on frameUniforms, noise and lighting WGSL.
 
 import { frameUniformsWgsl } from './frameUniforms.wgsl.js';
@@ -12,7 +12,7 @@ export const rippleEventCapacity = 32; // the largest pool any preset uses (qual
 export const waterWgsl = frameUniformsWgsl + noiseWgsl + lightingWgsl + /* wgsl */ `
 struct WaterUniforms {
   rippleEvents: array<vec4f, ${rippleEventCapacity}>, // x, z, start time, strength
-  rippleCountAndWind: vec4f, // events in use, wind gust strength, 0, 0
+  rippleCountAndWind: vec4f, // events in use, wind gust strength, height of the mirrored water, 1 if mirrored this frame
 }
 @group(1) @binding(0) var<uniform> water: WaterUniforms;
 @group(1) @binding(1) var reflectionImage: texture_2d<f32>;
@@ -28,32 +28,32 @@ const windRippleScale = 16.0; // waves per metre in a gust
 const windSlopeStrength = 0.35; // how much a full gust tilts the surface
 const rimWidth = 0.32; // share of the puddle size the wet rim reaches beyond the water
 
-// ---- puddles: one quad per puddle instance
-struct PuddleVaryings {
+// ---- water bodies: one quad each
+struct WaterBodyVaryings {
   @builtin(position) clipPosition: vec4f,
   @location(0) worldPosition: vec3f,
   @location(1) localPoint: vec2f, // -1..1 across the water, more for the rim
-  @location(2) @interpolate(flat) seedDepthShape: vec4f, // random seed, depth (0 shallow, 1 deep), shape (0 organic, 1 basin), planar reflection
+  @location(2) @interpolate(flat) seedDepthShape: vec4f, // random seed, depth (0 shallow, 1 deep), shape (0 organic, 1 basin), surface height
 }
 
-@vertex fn puddleVertex(
+@vertex fn waterBodyVertex(
   @builtin(vertex_index) vertexIndex: u32,
   @location(0) centreAndRotation: vec4f, // x, surface y, z, rotation
   @location(1) halfSizeAndLook: vec4f, // half size x, half size z, seed, depth
-  @location(2) shapeAndReflection: vec4f, // shape, uses planar reflection, 0, 0
-) -> PuddleVaryings {
+  @location(2) shapeAndSpare: vec4f, // shape, 0, 0, 0
+) -> WaterBodyVaryings {
   let corners = array<vec2f, 6>(vec2f(-1.0, -1.0), vec2f(1.0, -1.0), vec2f(1.0, 1.0), vec2f(-1.0, -1.0), vec2f(1.0, 1.0), vec2f(-1.0, 1.0));
-  let reach = select(1.0 + rimWidth * 1.5, 1.0, shapeAndReflection.x > 0.5);
+  let reach = select(1.0 + rimWidth * 1.5, 1.0, shapeAndSpare.x > 0.5);
   let corner = corners[vertexIndex] * reach;
   let cosine = cos(centreAndRotation.w);
   let sine = sin(centreAndRotation.w);
   let offset = corner * halfSizeAndLook.xy;
   let worldPosition = vec3f(centreAndRotation.x + offset.x * cosine - offset.y * sine, centreAndRotation.y, centreAndRotation.z + offset.x * sine + offset.y * cosine);
-  var output: PuddleVaryings;
+  var output: WaterBodyVaryings;
   output.clipPosition = frame.viewProjection * vec4f(worldPosition, 1.0);
   output.worldPosition = worldPosition;
   output.localPoint = corner;
-  output.seedDepthShape = vec4f(halfSizeAndLook.zw, shapeAndReflection.xy);
+  output.seedDepthShape = vec4f(halfSizeAndLook.zw, shapeAndSpare.x, centreAndRotation.y);
   return output;
 }
 
@@ -96,7 +96,7 @@ fn reflectedColor(screenUv: vec2f, slope: vec2f, reflectedDirection: vec3f, uses
   return mix(buildingTint, sky, smoothstep(0.05, 0.45, reflectedDirection.y));
 }
 
-// A marigold petal, a leaf or a bit of straw on each puddle, drifting and bobbing on the ripples.
+// A marigold petal, a leaf or a bit of straw on each water body, drifting and bobbing on the ripples.
 fn floatingThing(localPoint: vec2f, seed: f32, slope: vec2f) -> vec4f {
   let time = frame.cameraPositionAndTime.w;
   let kind = floor(fract(seed * 7.13) * 3.0);
@@ -113,11 +113,11 @@ fn floatingThing(localPoint: vec2f, seed: f32, slope: vec2f) -> vec4f {
   return vec4f(color, inside);
 }
 
-@fragment fn puddleFragment(input: PuddleVaryings) -> @location(0) vec4f {
+@fragment fn waterBodyFragment(input: WaterBodyVaryings) -> @location(0) vec4f {
   let seed = input.seedDepthShape.x;
   let depthLook = input.seedDepthShape.y;
   let isBasin = input.seedDepthShape.z > 0.5;
-  // organic outline: the distance from the centre bent by noise, so no puddle is a circle
+  // organic outline: the distance from the centre bent by noise, so the puddle is no circle
   let bend = fractalNoise2D(input.localPoint * 1.4 + seed * 37.0) - 0.5;
   let shapeDistance = select(length(input.localPoint) + bend * 0.55, max(abs(input.localPoint.x), abs(input.localPoint.y)), isBasin);
   let waterAmount = 1.0 - smoothstep(0.86, 1.0, shapeDistance);
@@ -131,11 +131,13 @@ fn floatingThing(localPoint: vec2f, seed: f32, slope: vec2f) -> vec4f {
   let fresnel = 0.04 + 0.96 * pow(1.0 - facing, 4.0);
   let reflectedDirection = reflect(-toCamera, normal);
   let screenUv = input.clipPosition.xy * frame.screenSize.zw;
-  var mirrored = reflectedColor(screenUv, slope, reflectedDirection, input.seedDepthShape.w > 0.5);
+  // only the water lying on the plane mirrored this frame can use the reflection image
+  let isMirroredThisFrame = water.rippleCountAndWind.w > 0.5 && abs(input.seedDepthShape.w - water.rippleCountAndWind.z) < 0.05;
+  var mirrored = reflectedColor(screenUv, slope, reflectedDirection, isMirroredThisFrame);
   // the low sun glints off the ripples
   let glint = pow(max(dot(reflectedDirection, frame.sunDirection.xyz), 0.0), 600.0) * sunVisibility(input.worldPosition, vec3f(0.0, 1.0, 0.0));
   mirrored += toneMapToDisplay(frame.sunColor.rgb * glint * 3.0).rgb;
-  // shallow puddles are muddy and brown, deep ones darker and clearer
+  // shallow water is muddy and brown, deep water darker and clearer
   let murk = mix(0.45, 0.15, depthLook);
   let bottomTint = mix(vec3f(0.2, 0.12, 0.06), vec3f(0.03, 0.03, 0.025), depthLook);
   let waterColor = mirrored * fresnel + bottomTint * murk * (1.0 - fresnel);

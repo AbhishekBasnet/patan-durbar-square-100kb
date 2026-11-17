@@ -18,7 +18,7 @@ export const detailGroupCount = 5;
 // Easy tweak: where each preset switches, in metres from the camera to the nearest point of a chunk.
 export const lodSwitchDistances = {
   high: { nearToMiddle: 34, middleToFar: 80 },
-  medium: { nearToMiddle: 24, middleToFar: 55 },
+  medium: { nearToMiddle: 32, middleToFar: 70 },
   low: { nearToMiddle: 14, middleToFar: 34 },
 };
 const crossFadeBandMetres = 5;
@@ -27,7 +27,7 @@ export const levelsPerChunk = 3; // near, middle, far
 
 // chunks: Float32Array of [centreX, centreY, centreZ, radius] per chunk.
 // levelRanges: Uint32Array of [first vertex, vertex count] for near, middle and far, per chunk.
-// fixedLevel: always draw this level (the puddle reflection draws everything far).
+// fixedLevel: always draw this level (the water reflection draws everything far).
 export function createDetailSelector({ chunkBounds, levelRanges, quality, fixedLevel = -1 }) {
   const chunkCount = chunkBounds.length / 4;
   const switchDistances = lodSwitchDistances[quality.name];
@@ -108,7 +108,7 @@ export function createDetailSelector({ chunkBounds, levelRanges, quality, fixedL
       if (towardFar > 0) addDraw(chunk, 2, towardFar < 1 ? towardFar : 1);
     }
   };
-  // Is a sphere inside the view of the last update? (the puddles ask, to skip their reflection)
+  // Is a sphere inside the view of the last update? (the water asks, to skip its reflection)
   selector.isSphereVisible = (x, y, z, radius) => !isOutsideView(x, y, z, radius);
   return selector;
 }
