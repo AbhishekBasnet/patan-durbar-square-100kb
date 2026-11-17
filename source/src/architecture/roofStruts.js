@@ -15,7 +15,7 @@ const armPairCount = 2;
 const carvedStrutsByLength = new Map();
 
 // Carves a strut `length` metres long, lying along +y from the origin, its carved face toward +x.
-export function carveRoofStrut(length) {
+function carveRoofStrut(length) {
   const key = length.toFixed(2);
   if (carvedStrutsByLength.has(key)) return carvedStrutsByLength.get(key);
   const strut = new MeshBuilder();

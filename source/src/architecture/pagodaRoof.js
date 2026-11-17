@@ -37,17 +37,17 @@ export function addPagodaRoof(builder, roof) {
   builder.material(material.roofTile, 100 + Math.round(roof.baseY * 7) % 80).occlusion(1);
   for (let side = 0; side < 4; side++) {
     for (let ring = 0; ring < ringCount; ring++) {
-      const t0 = ring / ringCount, t1 = (ring + 1) / ringCount;
+      const ringStart = ring / ringCount, ringEnd = (ring + 1) / ringCount;
       for (let segment = 0; segment < edgeSegmentCount; segment++) {
-        const s0 = segment / edgeSegmentCount, s1 = (segment + 1) / edgeSegmentCount;
-        builder.addQuad(roofPoint(roof, t0, side, s0), roofPoint(roof, t0, side, s1), roofPoint(roof, t1, side, s1), roofPoint(roof, t1, side, s0));
+        const segmentStart = segment / edgeSegmentCount, segmentEnd = (segment + 1) / edgeSegmentCount;
+        builder.addQuad(roofPoint(roof, ringStart, side, segmentStart), roofPoint(roof, ringStart, side, segmentEnd), roofPoint(roof, ringEnd, side, segmentEnd), roofPoint(roof, ringEnd, side, segmentStart));
       }
     }
     // fascia: the wooden edge board below the eave line
     builder.material(material.wood, 45).occlusion(0.8);
     for (let segment = 0; segment < edgeSegmentCount; segment++) {
-      const a = roofPoint(roof, 0, side, segment / edgeSegmentCount), b = roofPoint(roof, 0, side, (segment + 1) / edgeSegmentCount);
-      builder.addQuad([a[0], a[1] - fasciaHeightMetres, a[2]], [b[0], b[1] - fasciaHeightMetres, b[2]], b, a);
+      const left = roofPoint(roof, 0, side, segment / edgeSegmentCount), right = roofPoint(roof, 0, side, (segment + 1) / edgeSegmentCount);
+      builder.addQuad([left[0], left[1] - fasciaHeightMetres, left[2]], [right[0], right[1] - fasciaHeightMetres, right[2]], right, left);
     }
     builder.material(material.roofTile, 120).occlusion(1);
   }
@@ -100,8 +100,8 @@ function addEaveBellsAtAllLevels(builder, roof, spacingMetres) {
     const half = side % 2 ? roof.eaveHalfX : roof.eaveHalfZ;
     const count = Math.max(1, Math.floor(2 * half / spacingMetres));
     for (let bell = 0; bell < count; bell++) {
-      const s = (bell + 0.5) / count;
-      const [x, eaveY, z] = roofPoint(roof, 0, side, s);
+      const alongEdge = (bell + 0.5) / count;
+      const [x, eaveY, z] = roofPoint(roof, 0, side, alongEdge);
       const inset = 0.08, length = Math.hypot(x, z);
       const hangX = x - x / length * inset, hangZ = z - z / length * inset;
       const top = eaveY - fasciaHeightMetres, bellTop = top - bellChainLengthMetres;

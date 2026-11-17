@@ -3,7 +3,7 @@
 // Depends on math.js; reads input.js state; colliders come from the solid blocks (blocks.js), squareBounds and
 // the ground holes (sunken pits, whose floor is below the paving).
 
-import { clamp, degreesToRadians } from './math.js';
+import { clamp, degreesToRadians, gravityMetresPerSecondSquared } from './math.js';
 
 const eyeHeightMetres = 1.6;
 const bodyHeightMetres = 1.75;
@@ -12,11 +12,10 @@ const walkingSpeedMetresPerSecond = 4.5; // easy first tweak: a brisk walk
 const fastWalkingSpeedMetresPerSecond = walkingSpeedMetresPerSecond * 1.3; // Shift: 30% faster
 const accelerationRate = 10; // how quickly walking speed follows the keys, per second
 const maximumStepUpMetres = 0.5; // anything lower is a stair you walk up
-const gravityMetresPerSecondSquared = 9.8;
 const hopSpeedMetresPerSecond = 3.2;
 const eyeSmoothingRate = 14; // how quickly the eye follows the feet up and down steps, per second
 const headBobAmplitudeMetres = 0.025;
-const headBobStrideMetres = 0.75;
+export const headBobStrideMetres = 0.75; // also the footstep stride for ripples (water.js)
 const maximumPitchRadians = 1.45;
 const maximumSubstepMetres = 0.15; // shorter than the body radius, so thin posts are never skipped
 const boundsMarginMetres = 0.4;

@@ -5,15 +5,15 @@
 import { degreesToRadians, orthographic, viewLookingAlong, multiplyMatrices } from '../core/math.js';
 
 // Easy first tweaks: the sun's position and colours.
-export const sunAzimuthDegrees = 236; // compass direction of the sun: south-west, so it lights the palace front and
+const sunAzimuthDegrees = 236; // compass direction of the sun: south-west, so it lights the palace front and
 // rakes along the south faces of the temples as you look up the square
-export const sunElevationDegrees = 13; // low golden-hour sun: long shadows across the paving
-export const goldenHourSunColor = [3.2, 2.15, 1.2]; // linear light, brighter than 1 (tone-mapped later)
-export const skyZenithColor = [0.2, 0.36, 0.66];
-export const skyHorizonColor = [1.05, 0.72, 0.45];
-export const groundBounceColor = [0.32, 0.17, 0.10]; // warm light thrown back by the brick paving and walls
-export const hazeColor = [0.95, 0.70, 0.48];
-export const hazeDensityPerMetre = 0.0022; // smoky haze: houses at 100 m are softened, the far hills fade out
+const sunElevationDegrees = 13; // low golden-hour sun: long shadows across the paving
+const goldenHourSunColor = [3.2, 2.15, 1.2]; // linear light, brighter than 1 (tone-mapped later)
+const skyZenithColor = [0.2, 0.36, 0.66];
+const skyHorizonColor = [1.05, 0.72, 0.45];
+const groundBounceColor = [0.32, 0.17, 0.10]; // warm light thrown back by the brick paving and walls
+const hazeColor = [0.95, 0.70, 0.48];
+const hazeDensityPerMetre = 0.0022; // smoky haze: houses at 100 m are softened, the far hills fade out
 
 export function sunDirection() {
   const azimuth = sunAzimuthDegrees * degreesToRadians, elevation = sunElevationDegrees * degreesToRadians;

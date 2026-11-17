@@ -43,8 +43,8 @@ const monumentBuilders = {
 function holeToWorld(row, hole) {
   const corners = [[hole.minX, hole.minZ], [hole.maxX, hole.minZ], [hole.minX, hole.maxZ], [hole.maxX, hole.maxZ]]
     .map(([x, z]) => placeInMonument(row, x, z, createBlock({ alongFront: 0, across: 0, height: 0 })));
-  const xs = corners.map((corner) => corner.x), zs = corners.map((corner) => corner.z);
-  return { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs), floorY: hole.floorY };
+  const cornerXs = corners.map((corner) => corner.x), cornerZs = corners.map((corner) => corner.z);
+  return { minX: Math.min(...cornerXs), maxX: Math.max(...cornerXs), minZ: Math.min(...cornerZs), maxZ: Math.max(...cornerZs), floorY: hole.floorY };
 }
 
 // Adds every monument to `builder` (world space). Returns their collision blocks and ground holes.

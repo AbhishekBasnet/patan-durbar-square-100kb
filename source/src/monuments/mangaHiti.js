@@ -79,7 +79,7 @@ export function buildMangaHiti(builder, solids, holes) {
 }
 
 // ---- Mani Mandap: a three-tier stone platform carrying an open hall of wooden posts under one tile roof
-export const maniMandap = { postHeight: 2.5, postHalfSize: 0.13, postsAlong: 2, postsAcross: 4, roofOverhang: 1.0, roofHeight: 1.6 };
+const maniMandap = { postHeight: 2.5, postHalfSize: 0.13, postsAlong: 2, postsAcross: 4, roofOverhang: 1.0, roofHeight: 1.6 };
 
 export function buildManiMandap(builder, solids, holes, row) {
   const plinth = addSteppedPlinth(builder, solids, {

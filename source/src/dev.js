@@ -22,8 +22,8 @@ function pathValueAt(progress, component) {
   const position = clamp(progress, 0, 1) * segmentCount;
   const segment = Math.min(Math.floor(position), segmentCount - 1), t = position - segment;
   const point = (index) => walkThroughPath[clamp(index, 0, segmentCount)][component];
-  const p0 = point(segment - 1), p1 = point(segment), p2 = point(segment + 1), p3 = point(segment + 2);
-  return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
+  const before = point(segment - 1), start = point(segment), end = point(segment + 1), after = point(segment + 2);
+  return 0.5 * (2 * start + (end - before) * t + (2 * before - 5 * start + 4 * end - after) * t * t + (3 * start - before - 3 * end + after) * t * t * t);
 }
 
 function summarize(values, count) {

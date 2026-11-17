@@ -7,6 +7,10 @@ const carvingPlain = 0u;
 const carvingRelief = 1u;
 const carvingLattice = 2u;
 const latticeHoleSpacing = 0.075; // metres between lattice openings
+const grainScale = vec2f(2.0, 40.0); // grain runs along the timber: long streaks, fine across
+const carvingScale = 26.0; // relief motifs per metre
+const carvingWarpScale = 5.0; // how fast the motifs bend
+const carvingWarpAmount = 2.0;
 
 struct WoodSample {
   albedo: vec3f,
@@ -16,7 +20,7 @@ struct WoodSample {
 
 fn weatheredWood(coordinates: vec2f, footprint: f32, baseColor: vec3f, carving: u32, variant: f32) -> WoodSample {
   var output: WoodSample;
-  let grain = valueNoise2D(coordinates * vec2f(2.0, 40.0) + variant * 31.0);
+  let grain = valueNoise2D(coordinates * grainScale + variant * 31.0);
   let detail = 1.0 - smoothstep(0.004, 0.03, footprint);
   // grey silvering where the rain reaches, near-black where it does not
   let silvering = smoothstep(0.35, 0.8, fractalNoise2D(coordinates * 0.9 + variant * 7.0));
@@ -25,7 +29,7 @@ fn weatheredWood(coordinates: vec2f, footprint: f32, baseColor: vec3f, carving: 
   output.bump = vec2f(0.0);
   if (carving == carvingRelief) {
     // interlocking scrolls and petals: two crossing ripple fields bent by noise
-    let warped = coordinates * 26.0 + 2.0 * vec2f(valueNoise2D(coordinates * 5.0), valueNoise2D(coordinates * 5.0 + 9.0));
+    let warped = coordinates * carvingScale + carvingWarpAmount * vec2f(valueNoise2D(coordinates * carvingWarpScale), valueNoise2D(coordinates * carvingWarpScale + 9.0));
     let height = sin(warped.x) * sin(warped.y * 1.3) + 0.5 * sin(warped.x * 2.1 + warped.y);
     output.bump = vec2f(cos(warped.x) * sin(warped.y * 1.3), sin(warped.x) * cos(warped.y * 1.3)) * 0.6 * detail;
     output.cavity = mix(1.0, 0.55 + 0.45 * smoothstep(-1.0, 1.0, height), detail);

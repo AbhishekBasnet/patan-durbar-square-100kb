@@ -1,8 +1,9 @@
-// Small math library: scalar helpers, seeded random numbers, value noise and 4x4 matrices.
+// Small math library: scalar helpers, seeded random numbers, gravity and 4x4 matrices.
 // Matrices are column-major Float32Arrays (the layout WGSL expects) and every function writes into an
 // output array, so the frame loop never allocates. No dependencies.
 
 export const degreesToRadians = Math.PI / 180;
+export const gravityMetresPerSecondSquared = 9.81; // shared by walking and falling water
 
 export function clamp(value, low, high) {
   return value < low ? low : value > high ? high : value;
@@ -10,11 +11,6 @@ export function clamp(value, low, high) {
 
 export function mix(from, to, amount) {
   return from + (to - from) * amount;
-}
-
-export function smoothStep(edgeLow, edgeHigh, value) {
-  const t = clamp((value - edgeLow) / (edgeHigh - edgeLow), 0, 1);
-  return t * t * (3 - 2 * t);
 }
 
 // A seeded random number generator (mulberry32): the same seed always builds the same square.
@@ -29,24 +25,6 @@ export function createRandom(seed) {
   };
   next.between = (low, high) => low + (high - low) * next();
   return next;
-}
-
-// Hash of two integers to a number in [0, 1).
-export function hash2D(x, y) {
-  let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
-
-// Smooth value noise in [0, 1) on a unit grid.
-export function valueNoise2D(x, y) {
-  const cellX = Math.floor(x), cellY = Math.floor(y);
-  const fractionX = x - cellX, fractionY = y - cellY;
-  const blendX = fractionX * fractionX * (3 - 2 * fractionX);
-  const blendY = fractionY * fractionY * (3 - 2 * fractionY);
-  const bottom = mix(hash2D(cellX, cellY), hash2D(cellX + 1, cellY), blendX);
-  const top = mix(hash2D(cellX, cellY + 1), hash2D(cellX + 1, cellY + 1), blendX);
-  return mix(bottom, top, blendY);
 }
 
 // Reverse-Z perspective projection (depth 1 at the near plane, 0 at infinity): much better depth precision

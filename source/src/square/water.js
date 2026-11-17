@@ -7,11 +7,11 @@
 import { monumentLayout } from './layout.js';
 import { placeInMonument, createBlock, rotationForFacing } from './blocks.js';
 import { describeMangaHitiWater } from '../monuments/mangaHiti.js';
-import { createRandom } from '../core/math.js';
+import { createRandom, gravityMetresPerSecondSquared } from '../core/math.js';
+import { headBobStrideMetres } from '../core/camera.js';
 
-export const floatsPerWaterBody = 12;
+const floatsPerWaterBody = 12;
 const waterSeed = 1986;
-const footstepStrideMetres = 0.75;
 const footstepStrength = 1.6;
 const streamLandingStrength = 1.0;
 const windGustStrength = 0.6; // easy tweak: 0 for still water
@@ -41,7 +41,7 @@ export function createWaterField(quality) {
 
   const streams = localStreams.map((stream) => {
     const spout = toWorld(stream);
-    const fallSeconds = Math.sqrt(2 * stream.drop / 9.81), reach = stream.outflowMetresPerSecond * fallSeconds;
+    const fallSeconds = Math.sqrt(2 * stream.drop / gravityMetresPerSecondSquared), reach = stream.outflowMetresPerSecond * fallSeconds;
     return {
       spout: [spout.x, stream.y, spout.z], speed: stream.outflowMetresPerSecond, direction: [Math.cos(turn), Math.sin(turn)], drop: stream.drop,
       landing: [spout.x + Math.cos(turn) * reach, spout.z + Math.sin(turn) * reach],
@@ -80,7 +80,7 @@ export function createWaterField(quality) {
     rippleEvents, rippleCapacity, windGustStrength, startRipple,
     // Called once per frame: footsteps in the water start new rings.
     update(time, camera) {
-      const strideIndex = Math.floor(camera.bobDistance / footstepStrideMetres);
+      const strideIndex = Math.floor(camera.bobDistance / headBobStrideMetres);
       if (strideIndex !== lastStrideIndex) {
         lastStrideIndex = strideIndex;
         const foot = camera.footPosition;

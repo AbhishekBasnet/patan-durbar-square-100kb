@@ -1,3 +1,5 @@
+// The second number in builder.material(id, variant) calls across the code is not a tuning value: it is a
+// tint seed (0-255) that shifts each part's brightness a little, so neighbouring parts never match exactly.
 // Named materials of the square: their ids (stored in every vertex) and their look (colour, roughness,
 // metalness, weathering). architecture.wgsl.js turns the table into WGSL constants.
 // Depends on nothing.

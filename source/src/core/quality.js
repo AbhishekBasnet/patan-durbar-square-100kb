@@ -6,7 +6,7 @@
 const storageKey = 'patanDurbarQuality';
 
 // Every preset shows the same square; lower ones only remove fine detail and pixels.
-export const qualityPresets = {
+const qualityPresets = {
   high: {
     name: 'high',
     antialiasingSamples: 4,

@@ -4,6 +4,8 @@
 export const tileWgsl = /* wgsl */ `
 const tileRowHeight = 0.085; // metres of height per row of tiles
 const tileWidth = 0.17;
+const rainStainScale = vec2f(4.0, 0.3); // stains: narrow across, long down the wall
+const plasterPatchScale = 0.8;
 
 struct TileSample {
   albedo: vec3f,
@@ -31,8 +33,8 @@ fn mossyRoofTiles(worldPosition: vec3f, coordinates: vec2f, normal: vec3f, footp
 
 // Whitewash over brick: patched, faded, and stained by rain.
 fn patchedPlaster(coordinates: vec2f, baseColor: vec3f, weathering: f32) -> vec3f {
-  let patches = fractalNoise2D(coordinates * 0.8);
-  let rainStains = valueNoise2D(vec2f(coordinates.x * 4.0, coordinates.y * 0.3));
+  let patches = fractalNoise2D(coordinates * plasterPatchScale);
+  let rainStains = valueNoise2D(coordinates * rainStainScale);
   var albedo = baseColor * mix(0.8, 1.08, patches);
   albedo *= mix(1.0, 0.65 + 0.35 * rainStains, weathering * 0.8);
   // where the plaster has fallen off, the brick shows through

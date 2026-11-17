@@ -68,10 +68,10 @@ export class MeshBuilder {
 
   // Multiplies the current transform by a 3x4 matrix given as columns (a, b, c) and translation t.
   applyTransform(a0, a1, a2, b0, b1, b2, c0, c1, c2, t0, t1, t2) {
-    const m = this.matrix;
-    const column = (x, y, z) => [m[0] * x + m[3] * y + m[6] * z, m[1] * x + m[4] * y + m[7] * z, m[2] * x + m[5] * y + m[8] * z];
-    const a = column(a0, a1, a2), b = column(b0, b1, b2), c = column(c0, c1, c2), t = column(t0, t1, t2);
-    this.matrix = [...a, ...b, ...c, m[9] + t[0], m[10] + t[1], m[11] + t[2]];
+    const matrix = this.matrix;
+    const column = (x, y, z) => [matrix[0] * x + matrix[3] * y + matrix[6] * z, matrix[1] * x + matrix[4] * y + matrix[7] * z, matrix[2] * x + matrix[5] * y + matrix[8] * z];
+    const columnA = column(a0, a1, a2), columnB = column(b0, b1, b2), columnC = column(c0, c1, c2), shift = column(t0, t1, t2);
+    this.matrix = [...columnA, ...columnB, ...columnC, matrix[9] + shift[0], matrix[10] + shift[1], matrix[11] + shift[2]];
     return this;
   }
 
@@ -103,12 +103,12 @@ export class MeshBuilder {
 
   // ---- vertices
   addVertex(x, y, z, normalX, normalY, normalZ) {
-    const m = this.matrix;
-    this.positions.push(m[0] * x + m[3] * y + m[6] * z + m[9], m[1] * x + m[4] * y + m[7] * z + m[10], m[2] * x + m[5] * y + m[8] * z + m[11]);
+    const matrix = this.matrix;
+    this.positions.push(matrix[0] * x + matrix[3] * y + matrix[6] * z + matrix[9], matrix[1] * x + matrix[4] * y + matrix[7] * z + matrix[10], matrix[2] * x + matrix[5] * y + matrix[8] * z + matrix[11]);
     // normals go through the inverse transpose (the cofactor matrix), so stretched shapes still light right
-    const cofactorX = (m[4] * m[8] - m[5] * m[7]) * normalX + (m[5] * m[6] - m[3] * m[8]) * normalY + (m[3] * m[7] - m[4] * m[6]) * normalZ;
-    const cofactorY = (m[2] * m[7] - m[1] * m[8]) * normalX + (m[0] * m[8] - m[2] * m[6]) * normalY + (m[1] * m[6] - m[0] * m[7]) * normalZ;
-    const cofactorZ = (m[1] * m[5] - m[2] * m[4]) * normalX + (m[2] * m[3] - m[0] * m[5]) * normalY + (m[0] * m[4] - m[1] * m[3]) * normalZ;
+    const cofactorX = (matrix[4] * matrix[8] - matrix[5] * matrix[7]) * normalX + (matrix[5] * matrix[6] - matrix[3] * matrix[8]) * normalY + (matrix[3] * matrix[7] - matrix[4] * matrix[6]) * normalZ;
+    const cofactorY = (matrix[2] * matrix[7] - matrix[1] * matrix[8]) * normalX + (matrix[0] * matrix[8] - matrix[2] * matrix[6]) * normalY + (matrix[1] * matrix[6] - matrix[0] * matrix[7]) * normalZ;
+    const cofactorZ = (matrix[1] * matrix[5] - matrix[2] * matrix[4]) * normalX + (matrix[2] * matrix[3] - matrix[0] * matrix[5]) * normalY + (matrix[0] * matrix[4] - matrix[1] * matrix[3]) * normalZ;
     const length = Math.hypot(cofactorX, cofactorY, cofactorZ) || 1;
     this.normals.push(cofactorX / length, cofactorY / length, cofactorZ / length, this.currentOcclusion);
     this.materials.push(this.currentMaterial, this.currentVariant, this.currentCarving, 0);
@@ -117,8 +117,8 @@ export class MeshBuilder {
 
   // Mirroring transforms flip the winding; this keeps triangles facing outward.
   get isMirrored() {
-    const m = this.matrix;
-    return m[0] * (m[4] * m[8] - m[5] * m[7]) - m[3] * (m[1] * m[8] - m[2] * m[7]) + m[6] * (m[1] * m[5] - m[2] * m[4]) < 0;
+    const matrix = this.matrix;
+    return matrix[0] * (matrix[4] * matrix[8] - matrix[5] * matrix[7]) - matrix[3] * (matrix[1] * matrix[8] - matrix[2] * matrix[7]) + matrix[6] * (matrix[1] * matrix[5] - matrix[2] * matrix[4]) < 0;
   }
 
   // A flat triangle; corners counter-clockwise seen from the front.

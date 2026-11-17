@@ -2,6 +2,11 @@
 // Depends on nothing.
 
 export const noiseWgsl = /* wgsl */ `
+// three octaves of value noise: their weights, and how each is scaled and shifted off the one before
+const octaveWeights = vec3f(0.55, 0.3, 0.15);
+const octaveScales = vec2f(2.13, 4.37);
+const octaveShifts = vec2f(17.1, 3.7);
+
 fn hashOf2D(point: vec2f) -> f32 {
   var mixed = fract(point * vec2f(127.34, 311.71));
   mixed += dot(mixed, mixed + 34.53);
@@ -18,7 +23,7 @@ fn valueNoise2D(point: vec2f) -> f32 {
 }
 
 fn fractalNoise2D(point: vec2f) -> f32 {
-  return 0.55 * valueNoise2D(point) + 0.3 * valueNoise2D(point * 2.13 + 17.1) + 0.15 * valueNoise2D(point * 4.37 + 3.7);
+  return octaveWeights.x * valueNoise2D(point) + octaveWeights.y * valueNoise2D(point * octaveScales.x + octaveShifts.x) + octaveWeights.z * valueNoise2D(point * octaveScales.y + octaveShifts.y);
 }
 
 // Surface coordinates in metres: across and up a wall, or across the ground for flat surfaces.

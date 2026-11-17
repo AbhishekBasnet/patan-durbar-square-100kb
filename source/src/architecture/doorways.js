@@ -25,7 +25,7 @@ export function addCarvedFrame(builder, { halfWidth, bottom, top, depth, memberW
 }
 
 // The torana: a half-disc panel of carved wood standing on the lintel, with a seated figure at its centre.
-export function addTorana(builder, { radius, y, isGilded }) {
+function addTorana(builder, { radius, y, isGilded }) {
   builder.push().translate(0.02, y, 0);
   builder.material(isGilded ? material.gilded : material.wood, 160, 1).occlusion(0.95);
   for (let segment = 0; segment < toranaSegmentCount; segment++) {

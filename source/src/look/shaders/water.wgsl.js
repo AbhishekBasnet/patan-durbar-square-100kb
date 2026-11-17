@@ -7,6 +7,7 @@
 import { frameUniformsWgsl } from './frameUniforms.wgsl.js';
 import { noiseWgsl } from './noise.wgsl.js';
 import { lightingWgsl } from './lighting.wgsl.js';
+import { gravityMetresPerSecondSquared } from '../../core/math.js';
 
 export const rippleEventCapacity = 32; // the largest pool any preset uses (quality.js)
 export const waveSourceCapacity = 4; // steady wave sources: where the streams land
@@ -186,6 +187,7 @@ struct StreamVaryings {
 }
 
 const streamSegmentCount = 12u;
+const gravity = ${gravityMetresPerSecondSquared}; // metres per second squared
 const streamWidthMetres = 0.045;
 
 @vertex fn streamVertex(
@@ -197,10 +199,10 @@ const streamWidthMetres = 0.045;
   let corner = array<vec2f, 6>(vec2f(0.0, -1.0), vec2f(1.0, -1.0), vec2f(1.0, 1.0), vec2f(0.0, -1.0), vec2f(1.0, 1.0), vec2f(0.0, 1.0))[vertexIndex % 6u];
   let along = (f32(segment) + corner.x) / f32(streamSegmentCount);
   // time to fall the drop height, and the point on the arc at this share of it
-  let fallTime = sqrt(2.0 * directionAndDrop.z / 9.81);
+  let fallTime = sqrt(2.0 * directionAndDrop.z / gravity);
   let time = along * fallTime;
-  let point = spoutAndSpeed.xyz + vec3f(directionAndDrop.x * spoutAndSpeed.w * time, -4.905 * time * time, directionAndDrop.y * spoutAndSpeed.w * time);
-  let tangent = normalize(vec3f(directionAndDrop.x * spoutAndSpeed.w, -9.81 * time, directionAndDrop.y * spoutAndSpeed.w));
+  let point = spoutAndSpeed.xyz + vec3f(directionAndDrop.x * spoutAndSpeed.w * time, -0.5 * gravity * time * time, directionAndDrop.y * spoutAndSpeed.w * time);
+  let tangent = normalize(vec3f(directionAndDrop.x * spoutAndSpeed.w, -gravity * time, directionAndDrop.y * spoutAndSpeed.w));
   let side = normalize(cross(tangent, frame.cameraPositionAndTime.xyz - point));
   let width = streamWidthMetres * (1.0 - along * 0.35);
   let worldPosition = point + side * corner.y * width;

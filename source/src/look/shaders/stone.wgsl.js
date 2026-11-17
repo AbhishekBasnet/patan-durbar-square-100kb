@@ -3,6 +3,8 @@
 
 export const stoneWgsl = /* wgsl */ `
 const stoneCourseHeight = 0.32; // metres
+const rainStreakScale = vec2f(3.0, 0.5); // streaks: narrow across, long down the wall
+const lichenScale = 1.7; // patches per metre
 
 struct StoneSample {
   albedo: vec3f,
@@ -19,8 +21,8 @@ fn weatheredStone(coordinates: vec2f, footprint: f32, baseColor: vec3f, weatheri
   let detail = 1.0 - smoothstep(0.008, 0.03, footprint);
   let joint = (1.0 - smoothstep(0.004, 0.012, edge)) * detail * select(0.0, 1.0, hasJoints);
   let blockTone = mix(0.85, 1.12, hashOf2D(floor(blockCoordinate)));
-  let lichen = smoothstep(0.55, 0.85, fractalNoise2D(coordinates * 1.7));
-  let streaks = valueNoise2D(vec2f(coordinates.x * 3.0, coordinates.y * 0.5));
+  let lichen = smoothstep(0.55, 0.85, fractalNoise2D(coordinates * lichenScale));
+  let streaks = valueNoise2D(coordinates * rainStreakScale);
   var output: StoneSample;
   output.albedo = baseColor * mix(1.0, blockTone, detail * select(0.0, 1.0, hasJoints));
   output.albedo = mix(output.albedo, vec3f(0.22, 0.24, 0.17), lichen * 0.45 * weathering);

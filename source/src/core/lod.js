@@ -16,14 +16,14 @@ export const detailGroup = {
 export const detailGroupCount = 5;
 
 // Easy tweak: where each preset switches, in metres from the camera to the nearest point of a chunk.
-export const lodSwitchDistances = {
+const lodSwitchDistances = {
   high: { nearToMiddle: 34, middleToFar: 80 },
   medium: { nearToMiddle: 32, middleToFar: 70 },
   low: { nearToMiddle: 14, middleToFar: 34 },
 };
 const crossFadeBandMetres = 5;
 
-export const levelsPerChunk = 3; // near, middle, far
+const levelsPerChunk = 3; // near, middle, far
 
 // chunks: Float32Array of [centreX, centreY, centreZ, radius] per chunk.
 // levelRanges: Uint32Array of [first vertex, vertex count] for near, middle and far, per chunk.

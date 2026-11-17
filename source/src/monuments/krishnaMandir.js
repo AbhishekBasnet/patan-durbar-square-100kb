@@ -6,7 +6,7 @@ import { addSteppedPlinth } from '../architecture/plinths.js';
 import { addColonnadeStorey, addKiosk, addShikharaTower } from '../architecture/shikhara.js';
 import { material } from '../look/materials.js';
 
-export const krishnaMandirShikharaTiers = {
+const krishnaMandirShikharaTiers = {
   plinth: { width: 10.5, depth: 10.5, tierCount: 3, tierRiseMetres: 0.42, insetPerTier: 0.35, stairWidth: 2.2, tierMaterial: material.stone },
   groundColonnade: { halfSize: 4.5, height: 3.0, pillarsPerSide: 6, coreHalfSize: 2.6, doorway: { width: 0.9, height: 1.8 } },
   upperColonnade: { halfSize: 3.0, height: 2.5, pillarsPerSide: 5, coreHalfSize: 2.0 },
