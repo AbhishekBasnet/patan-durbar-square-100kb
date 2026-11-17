@@ -73,6 +73,13 @@ The palace wings use the same generator as the houses: storeys with glazed bands
 | The puddle in front of Krishna Mandir | The brief: a shower about an hour ago | One big puddle, about 7 x 4 m, to show the reflections. The user chose this over scattered puddles. Its spot is **(plausible)**. |
 | Manga Hiti water | Photos of Manga Hiti | Three streams from the makara spouts into knee-deep water filling the pit floor. The lowest steps and the trough are under water. The water level is **(plausible)**, chosen by the user. |
 
-## People, props, animals
+## Street life
 
-Added in step 6. Each type will be listed here with what it is based on.
+The user chose to keep the square quiet: vendors and pigeons only. There are no walking crowds, other animals, vehicles or sound.
+
+| Item | Based on | Notes |
+|---|---|---|
+| Vendors | Period photos of Kathmandu valley squares | About a dozen sellers sitting on the paving, along the palace front and between the temples. Their spots are **(plausible)**. |
+| Goods | Period photos | Vegetables and oranges on nanglo trays, spice heaps, rice and lentil sacks, clay and brass pots, bangles, cloth stacks, roasted corn on a brazier, sugarcane, tea with glass tumblers, bara and chatamari, a curio and thangka stand, grain drying on a mat. |
+| Clothing | Period photos | Daura-suruwal with a dhaka topi, saris and shawls, the black haku patasi with its red border. Colours are faded, as on period film **(plausible)**. |
+| Pigeons | Every period photo of the square | Three flocks that take off when you come within 3.5 m and circle back down. |

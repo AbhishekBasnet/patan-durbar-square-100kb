@@ -11,6 +11,8 @@ import { squareBounds, viewpoints } from './square/layout.js';
 import { buildSurroundings } from './square/surroundings.js';
 import { addPaving } from './square/paving.js';
 import { createWaterField } from './square/water.js';
+import { createStreetLife } from './life/streetLife.js';
+import { addVendorStalls } from './life/vendors.js';
 import { buildMonuments } from './monuments/allMonuments.js';
 import { MeshBuilder } from './core/meshBuilder.js';
 import { writeLightingUniforms, computeLightMapMatrices } from './look/lighting.js';
@@ -44,8 +46,9 @@ async function start() {
   const architecture = new MeshBuilder();
   const { solidBlocks, groundHoles } = buildMonuments(architecture);
   const houseBlocks = buildSurroundings(architecture);
+  const stallBlocks = addVendorStalls(architecture, quality);
   addPaving(architecture, groundHoles);
-  const camera = createWalkingCamera(buildColliders([...solidBlocks, ...houseBlocks]), squareBounds, groundHoles);
+  const camera = createWalkingCamera(buildColliders([...solidBlocks, ...houseBlocks, ...stallBlocks]), squareBounds, groundHoles);
   const lightMapMatrices = computeLightMapMatrices();
 
   await showLoadingStep('Lighting the late afternoon…', 0.8);
@@ -54,8 +57,9 @@ async function start() {
   const farDetailLevel = 2;
   const reflectionSelector = createDetailSelector({ chunkBounds, levelRanges, quality, fixedLevel: farDetailLevel });
   const waterField = createWaterField(quality);
+  const streetLife = createStreetLife(quality);
   const renderer = createRenderer({
-    device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, waterField,
+    device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, waterField, streetLife,
   });
   renderer.measureGpuTime = canMeasureGpuTime; // always on: the resolution scaler reads it
   const resolutionScaler = createResolutionScaler({ quality, renderer, canMeasureGpuTime });
@@ -85,7 +89,7 @@ async function start() {
       statsVisible = !statsVisible;
       statsLine.textContent = '';
     },
-    toggleSound: () => {}, // sound arrives in step 6
+    toggleSound: () => {}, // no sound in this version
     toggleFilmLook: () => {}, // the film look arrives in step 7
     openMenu: () => setMenuOpen(true),
     jumpToViewpoint,
@@ -166,6 +170,7 @@ async function start() {
       reflectionSelector.update(mirroredEye, mirroredViewProjection);
     }
     waterField.update(elapsedSeconds, camera);
+    streetLife.update(secondsElapsed, camera.eyePosition, detailSelector);
     if (!dev?.isBenchmarking()) resolutionScaler.update(frameMilliseconds);
     renderer.render(frameUniforms, reflectionUniforms, mirrorPlaneHeight);
     if (statsVisible) updateStats(frameMilliseconds);

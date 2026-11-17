@@ -31,7 +31,11 @@ const wgslReservedWords = new Set(`
   private workgroup position vertex_index instance_index front_facing frag_depth sample_index sample_mask
   local_invocation_id local_invocation_index global_invocation_id workgroup_id num_workgroups location builtin group
   binding vertex fragment compute workgroup_size interpolate flat linear perspective center centroid sample invariant
-  id align size do as`.trim().split(/\s+/));
+  id align size do as
+  abs acos all any asin atan atan2 ceil clamp cos cosh cross degrees determinant distance dot exp exp2 floor fma fract
+  inverseSqrt length log log2 max min mix normalize pow radians reflect refract round select sign sin sinh smoothstep
+  sqrt step tan tanh transpose trunc dpdx dpdy fwidth textureSample textureSampleLevel textureSampleCompare
+  textureSampleCompareLevel textureLoad textureDimensions arrayLength`.trim().split(/\s+/)); // WGSL words and builtins
 
 function stripWgsl(code) {
   return code
@@ -123,6 +127,9 @@ function listJsFiles(folder) {
 
 const sourceFiles = listJsFiles(path.join(sourceFolder, 'src'));
 const allWgslLiterals = sourceFiles.flatMap((file) => [...readFileSync(file, 'utf8').matchAll(wgslLiteralPattern)].map((match) => match[1]));
+for (const literal of allWgslLiterals) {
+  if (/\$\{[^}]*\{/.test(literal)) throw new Error('WGSL literal with braces inside ${...}: build the value in a constant first\n' + literal.slice(0, 200));
+}
 const wgslRenameMap = createWgslRenameMap(allWgslLiterals);
 
 const wgslMinifierPlugin = {

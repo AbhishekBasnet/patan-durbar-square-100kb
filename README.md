@@ -2,7 +2,7 @@
 
 A walkable recreation of Patan Durbar Square (Lalitpur, Nepal) as it was on an ordinary afternoon in the mid-1980s. It runs in the browser. Everything is made from code: no images, models or sound files. The whole square is one HTML file.
 
-> **Work in progress: step 5 of 7.** Every monument, the palace and the houses are built, with detail levels by distance. One big puddle from a passing shower mirrors Krishna Mandir, and Manga Hiti's spouts pour into knee-deep water you can wade into. It holds a steady 60 fps on Medium on Intel Iris Xe (see [PERFORMANCE.md](PERFORMANCE.md)). Next: street life.
+> **Work in progress: step 6 of 7.** Vendors sit with their goods around the square and pigeons peck and take flight. Every monument, the palace and the houses are built, with detail levels by distance. One big puddle from a passing shower mirrors Krishna Mandir, and Manga Hiti's spouts pour into knee-deep water you can wade into. It holds a steady 60 fps on Medium on Intel Iris Xe (see [PERFORMANCE.md](PERFORMANCE.md)). Next: street life.
 
 ## Try it
 
@@ -17,7 +17,7 @@ Open `index.html` in Chrome or Edge (it needs WebGPU), wait for the loading bar 
 | `1`–`6` | Jump to a viewpoint |
 | `Esc` | Menu (detail level, controls) |
 | `H` | Performance stats |
-| `V` / `M` | Film look / sound (coming in later steps) |
+| `V` | Film look (coming in step 7) |
 
 On a touchscreen, hold one finger down to walk and slide it to look around. A second finger walks faster.
 
@@ -35,7 +35,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **81.8 KB** minified, 30.9 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **98.5 KB** minified, 36.8 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -78,7 +78,13 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/look/shaders/brick, wood, stone, gold, tile .wgsl.js` | One file per material look |
 | `src/look/shaders/architecture.wgsl.js` | Picks the material per vertex and lights it |
 | `src/look/shaders/water.wgsl.js` | The puddle and Manga Hiti's water: outlines, Fresnel reflections, steady rings where the streams land, foam, footstep ripples, wind, the spout streams |
+| `src/look/shaders/figure.wgsl.js` | Vendors and pigeons: posed body parts, lighting, long golden-hour ground shadows |
 | `src/look/shaders/sky.wgsl.js`, `noise.wgsl.js` | Sky, shared noise |
+| `src/life/figures.js` | The figure generator: body parts, colour slots, accessories, the person mesh |
+| `src/life/clothing.js` | 1980s outfits: daura-suruwal and dhaka topi, saris, haku patasi, shawls |
+| `src/life/vendors.js` | Vendor spots, their goods on cloth, mats and nanglo trays, and the sellers |
+| `src/life/animals.js` | Pigeon flocks that take off when you come close |
+| `src/life/streetLife.js` | Creates the figures, moves the pigeons, packs what is in view for drawing |
 
 ## Easy first tweaks
 
@@ -92,7 +98,10 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | Detail switching distances | `lodSwitchDistances` in `src/core/lod.js` |
 | Move or turn a monument | its row (`x`, `z`, `facingDegrees`) in `src/square/layout.js` |
 
-Crowd size, number of vendors and film look strength arrive in later steps.
+| Number of vendors | `vendorCount` per preset in `src/core/quality.js` |
+| Pigeons per flock | `pigeonsPerFlock` per preset in `src/core/quality.js` |
+
+Film look strength arrives in step 7.
 
 ## Status
 
@@ -103,7 +112,7 @@ Crowd size, number of vendors and film look strength arrive in later steps.
 | 3. All monuments, palace, houses | done |
 | 4. Detail levels, performance on Medium | done |
 | 5. Water: one showcase puddle, knee-deep water at Manga Hiti | done |
-| 6. People, vendors, animals, vehicles, sound | |
+| 6. Street life: vendors and pigeons (by choice: no crowds, other animals, vehicles or sound) | done |
 | 7. Film look, polish, verification | |
 
 See [REFERENCES.md](REFERENCES.md) for what each monument is based on, and [LICENSE](LICENSE). This project adapts parts of [Abyssal Garden](https://github.com/Noniv/abyssal-garden).

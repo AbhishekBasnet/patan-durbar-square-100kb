@@ -17,6 +17,8 @@ export const qualityPresets = {
     skyOcclusionTapCount: 4,
     reflectionScale: 0.5, // water reflections at half the render size, per side
     rippleEventCapacity: 32,
+    pigeonsPerFlock: 14,
+    vendorCount: 14,
   },
   // the target: Intel Iris Xe (12th gen Core) and Radeon 680M at 1920x1080, 60 fps
   medium: {
@@ -29,6 +31,8 @@ export const qualityPresets = {
     skyOcclusionTapCount: 4,
     reflectionScale: 0.33,
     rippleEventCapacity: 16,
+    pigeonsPerFlock: 11,
+    vendorCount: 13,
   },
   // older integrated graphics and phones: starts below full resolution
   low: {
@@ -41,6 +45,8 @@ export const qualityPresets = {
     skyOcclusionTapCount: 2,
     reflectionScale: 0, // no reflection pass: water mirrors the sky and a tint of the buildings
     rippleEventCapacity: 8,
+    pigeonsPerFlock: 6,
+    vendorCount: 8,
   },
 };
 

@@ -1,5 +1,5 @@
 // The WebGPU renderer: opens the device, sizes the canvas within the preset's pixel budget, builds the sky,
-// architecture and water pipelines, draws the scene mirrored in the nearest water, draws the sun shadow map and sky occlusion map once at load, and draws
+// architecture, figure and water pipelines, draws the scene mirrored in the nearest water, draws the sun shadow map and sky occlusion map once at load, and draws
 // one frame per call. Optional GPU timestamps measure the frame for the H stats and the benchmark.
 // Depends on meshBuilder.js (vertex layout) and the WGSL in look/shaders/.
 
@@ -7,6 +7,8 @@ import { bytesPerVertex } from './meshBuilder.js';
 import { skyWgsl } from '../look/shaders/sky.wgsl.js';
 import { architectureWgsl } from '../look/shaders/architecture.wgsl.js';
 import { waterWgsl, rippleEventCapacity, waveSourceCapacity } from '../look/shaders/water.wgsl.js';
+import { figureWgsl } from '../look/shaders/figure.wgsl.js';
+import { floatsPerFigureInstance } from '../life/streetLife.js';
 
 export const frameUniformFloatCount = 100; // matches FrameUniforms in frameUniforms.wgsl.js
 export const sunShadowMatrixOffset = 64;
@@ -28,8 +30,9 @@ export async function openGpu() {
 }
 
 // detailSelector (lod.js) says which chunks and levels to draw each frame, and with what cross-fade;
-// reflectionSelector does the same for the mirrored scene. waterField (square/water.js) holds the water.
-export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices, detailSelector, reflectionSelector, waterField }) {
+// reflectionSelector does the same for the mirrored scene. waterField (square/water.js) holds the water;
+// streetLife (life/streetLife.js) the figures in view, one instance list per mesh.
+export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices, detailSelector, reflectionSelector, waterField, streetLife }) {
   const context = canvas.getContext('webgpu');
   const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
   const sampleCount = quality.antialiasingSamples;
@@ -53,8 +56,9 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const sceneBindGroupLayout = device.createBindGroupLayout({
     entries: [
       { binding: 0, visibility: allStages, buffer: {} },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
-      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
+      // the sun's shadow map is read in the vertex stage too (figure shadows check whether a figure stands in sun)
+      { binding: 1, visibility: allStages, texture: { sampleType: 'depth' } },
+      { binding: 2, visibility: allStages, sampler: { type: 'comparison' } },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
       { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
     ],
@@ -142,6 +146,50 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const waterUniformBuffer = device.createBuffer({ size: waterUniforms.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const reflectionSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
   let waterBindGroup; // rebuilt with the reflection image on resize
+
+  // figures: the mesh in buffer 0 (the architecture vertex format), one instance per figure in buffer 1
+  const figureInstanceLayout = (shaderLocationOffset) => ({
+    arrayStride: floatsPerFigureInstance * 4, stepMode: 'instance',
+    attributes: [
+      attribute(3, 0, 'float32x4'), attribute(4, 16, 'float32x4'), attribute(5, 32, 'uint32x2'),
+      ...[6, 7, 8, 9, 10].map((location, index) => attribute(location, 48 + index * 4, 'unorm8x4')),
+    ].map((entry) => ({ ...entry, shaderLocation: entry.shaderLocation + shaderLocationOffset })),
+  });
+  const figureBuffers = [architectureBuffers[0], figureInstanceLayout(0)];
+  const figurePipeline = createScenePipeline(figureWgsl, 'figureVertex', 'figureFragment', figureBuffers, sceneDepth, 'back', architectureConstants);
+  const reflectionFigurePipeline = hasReflection && createScenePipeline(figureWgsl, 'figureVertex', 'figureFragment', figureBuffers, sceneDepth, 'front', architectureConstants, { samples: 1 });
+  const figureShadowPipeline = createScenePipeline(figureWgsl, 'figureShadowVertex', 'figureShadowFragment', [figureInstanceLayout(0)], waterDepth, 'none', { shadowTapsPerAxis: 1 }, { blend: premultipliedBlend });
+  const figureGroups = streetLife.groups.map((group) => ({
+    group,
+    meshBuffer: createBufferWithData(group.vertexData, GPUBufferUsage.VERTEX),
+    vertexCount: group.vertexData.byteLength / bytesPerVertex,
+    instanceBuffer: device.createBuffer({ size: group.instances.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }),
+  }));
+  const uploadFigures = () => {
+    for (let index = 0; index < figureGroups.length; index++) {
+      const { group, instanceBuffer } = figureGroups[index];
+      if (group.count) device.queue.writeBuffer(instanceBuffer, 0, group.instances, 0, group.count * floatsPerFigureInstance);
+    }
+  };
+  const drawFigures = (pass, pipeline) => {
+    pass.setPipeline(pipeline);
+    for (let index = 0; index < figureGroups.length; index++) {
+      const { group, meshBuffer, vertexCount, instanceBuffer } = figureGroups[index];
+      if (!group.count) continue;
+      pass.setVertexBuffer(0, meshBuffer);
+      pass.setVertexBuffer(1, instanceBuffer);
+      pass.draw(vertexCount, group.count);
+    }
+  };
+  const drawFigureShadows = (pass) => {
+    pass.setPipeline(figureShadowPipeline);
+    for (let index = 0; index < figureGroups.length; index++) {
+      const { group, instanceBuffer } = figureGroups[index];
+      if (!group.count) continue;
+      pass.setVertexBuffer(0, instanceBuffer);
+      pass.draw(12, group.count); // the sun shadow strip and the contact shadow, six corners each
+    }
+  };
 
   const architectureLightMapPipeline = createLightMapPipeline(architectureWgsl, 'architectureDepthVertex', [{
     arrayStride: bytesPerVertex, attributes: [attribute(0, 0, 'float32x3')],
@@ -282,6 +330,7 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
     waterUniforms[waterSettingsOffset + 2] = drawReflection ? mirrorPlaneHeight : 0;
     waterUniforms[waterSettingsOffset + 3] = hasReflection && drawReflection ? 1 : 0;
     device.queue.writeBuffer(waterUniformBuffer, 0, waterUniforms);
+    uploadFigures();
     const canvasView = context.getCurrentTexture().createView();
     if (sampleCount > 1) colorAttachment.resolveTarget = canvasView;
     else colorAttachment.view = canvasView;
@@ -300,14 +349,18 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
       mirrorPass.setVertexBuffer(0, architectureBuffer);
       mirrorPass.setPipeline(reflectionArchitecturePipeline);
       drawList(mirrorPass, reflectionSelector.solidDraws, reflectionSelector.solidDrawCount);
+      drawFigures(mirrorPass, reflectionFigurePipeline);
       mirrorPass.setPipeline(reflectionSkyPipeline);
       mirrorPass.draw(3);
       mirrorPass.end();
     }
     const pass = encoder.beginRenderPass(readback ? (withReflection ? sceneEndTimedPass : timedScenePass) : scenePass);
     pass.setBindGroup(0, sceneBindGroup);
-    // the buildings first, so the depth test skips hidden pixels; the sky fills what is left; water on top
+    // the buildings first, so the depth test skips hidden pixels; then the figures' shadows on the paving and
+    // the figures; the sky fills what is left; water on top
     drawVisibleArchitecture(pass);
+    drawFigureShadows(pass);
+    drawFigures(pass, figurePipeline);
     pass.setPipeline(skyPipeline);
     pass.draw(3);
     drawWater(pass);

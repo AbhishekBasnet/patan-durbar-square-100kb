@@ -22,6 +22,8 @@ export const lodSwitchDistances = {
   low: { nearToMiddle: 14, middleToFar: 34 },
 };
 const crossFadeBandMetres = 5;
+// People nearer than this get the detailed figure, the rest the simple one (life/streetLife.js).
+export const figureDetailDistances = { high: 30, medium: 22, low: 12 };
 
 export const levelsPerChunk = 3; // near, middle, far
 
