@@ -1,7 +1,7 @@
 // Entry point: opens the GPU, picks the quality preset, builds the square from layout.js, then runs the
 // frame loop and the start menu. Depends on every core/ module, square/ and look/lighting.js.
 
-import { openGpu, createRenderer, frameUniformFloatCount } from './core/renderer.js';
+import { openGpu, createRenderer, frameUniformFloatCount, sunShadowMatrixOffset, skyOcclusionMatrixOffset } from './core/renderer.js';
 import { pickQuality, storeQuality, qualityNames } from './core/quality.js';
 import { createInput } from './core/input.js';
 import { createWalkingCamera, buildColliders } from './core/camera.js';
@@ -10,7 +10,10 @@ import { squareBounds, viewpoints } from './square/layout.js';
 import { buildMonumentBlockout } from './square/blockout.js';
 import { buildSurroundings } from './square/surroundings.js';
 import { packBlockInstances } from './square/blocks.js';
-import { writeLightingUniforms } from './look/lighting.js';
+import { addPaving } from './square/paving.js';
+import { buildMonuments } from './monuments/allMonuments.js';
+import { MeshBuilder } from './core/meshBuilder.js';
+import { writeLightingUniforms, computeLightMapMatrices } from './look/lighting.js';
 import { startDevTools } from './dev.js';
 
 const verticalFieldOfViewDegrees = 62;
@@ -38,17 +41,26 @@ async function start() {
   });
 
   await showLoadingStep('Laying out the square…', 0.4);
+  const architecture = new MeshBuilder();
+  addPaving(architecture);
+  const monumentSolids = buildMonuments(architecture);
   const blocks = [...buildMonumentBlockout(), ...buildSurroundings()];
-  const camera = createWalkingCamera(buildColliders(blocks), squareBounds);
+  const camera = createWalkingCamera(buildColliders([...blocks, ...monumentSolids]), squareBounds);
+  const lightMapMatrices = computeLightMapMatrices();
 
   await showLoadingStep('Lighting the late afternoon…', 0.8);
-  const renderer = createRenderer({ device, canMeasureGpuTime, canvas, quality, blockInstancesByShape: packBlockInstances(blocks) });
+  const renderer = createRenderer({
+    device, canMeasureGpuTime, canvas, quality, lightMapMatrices,
+    blockInstancesByShape: packBlockInstances(blocks), architectureVertexData: architecture.toVertexData(),
+  });
   addEventListener('resize', renderer.resize);
 
   // ---- per-frame state, all preallocated
   const frameUniforms = new Float32Array(frameUniformFloatCount);
   const projection = new Float32Array(16), view = new Float32Array(16), viewProjection = new Float32Array(16), inverseViewProjection = new Float32Array(16);
   writeLightingUniforms(frameUniforms, 36);
+  frameUniforms.set(lightMapMatrices.sunShadowMatrix, sunShadowMatrixOffset);
+  frameUniforms.set(lightMapMatrices.skyOcclusionMatrix, skyOcclusionMatrixOffset);
   let lastTimestamp = 0, elapsedSeconds = 0;
   let statsVisible = false, statsTimer = 0, statsFrames = 0, statsWorstMilliseconds = 0;
   let menuOpen = true;

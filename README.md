@@ -2,7 +2,7 @@
 
 A walkable recreation of Patan Durbar Square (Lalitpur, Nepal) as it was on an ordinary afternoon in the mid-1980s. It runs in the browser. Everything is made from code: no images, models or sound files. The whole square is one HTML file.
 
-> **Work in progress: step 1 of 7.** The monuments are plain blocks at their estimated positions and heights. Real architecture starts in step 2.
+> **Work in progress: step 2 of 7.** Char Narayan and Krishna Mandir are fully built, with golden-hour light and shadows. The other monuments and the houses are still plain blocks until step 3.
 
 ## Try it
 
@@ -35,7 +35,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **28.7 KB** minified, 11.9 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **58.0 KB** minified, 22.7 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -48,17 +48,34 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/main.js` | Entry point: builds the square, runs the frame loop and the menu |
 | `src/dev.js` | Dev build only: scripted walk-through (F) and benchmark (B) |
 | `src/core/math.js` | Scalars, seeded random, value noise, matrices |
-| `src/core/meshBuilder.js` | Geometry helpers (prisms for now) |
+| `src/core/meshBuilder.js` | Geometry helpers: transform stack, boxes, prisms, lathes, tubes, vertex packing |
 | `src/core/renderer.js` | WebGPU device, render targets, pipelines, frame drawing, GPU timing |
 | `src/core/camera.js` | Walking camera: eye height, head bob, hop, collision with steps and walls |
 | `src/core/input.js` | Keyboard, mouse and touch |
 | `src/core/quality.js` | High / Medium / Low presets and the first-visit pick |
+| `src/architecture/plinths.js` | Stepped plinths with front stairs; stone lions and elephants |
+| `src/architecture/brickWall.js` | Brick cores with glazed base bands and stepped cornices |
+| `src/architecture/doorways.js` | Carved nested door frames, closed doors, toranas |
+| `src/architecture/windows.js` | Latticed windows and window rows |
+| `src/architecture/roofStruts.js` | Carved roof struts with deity figures |
+| `src/architecture/pagodaRoof.js` | Tiered tile roofs, gilded finial, eave bells, the pataka banner |
+| `src/architecture/pagodaTemple.js` | Assembles a whole pagoda temple from a table of numbers |
+| `src/architecture/shikhara.js` | Stone shikhara towers, pillars, colonnades, kiosks |
+| `src/monuments/charNarayanTemple.js` | Char Narayan: parameters only |
+| `src/monuments/krishnaMandir.js` | Krishna Mandir: parameters only |
+| `src/monuments/allMonuments.js` | Places every built monument from the layout and collects its collision |
+| `src/square/paving.js` | The ground |
 | `src/square/layout.js` | The map: every monument's position, facing and size, and the 6 viewpoints |
 | `src/square/blocks.js` | The plain block (box, octagon, cylinder) and its GPU packing |
 | `src/square/blockout.js` | Temporary: rough massing of each monument, replaced in steps 2–3 |
 | `src/square/surroundings.js` | The houses around the square, with alleys |
-| `src/look/lighting.js` | The golden-hour sun, sky and haze |
-| `src/look/shaders/*.wgsl.js` | WGSL: shared uniforms, sky, blockout |
+| `src/look/lighting.js` | The golden-hour sun, sky and haze; the shadow and sky occlusion map matrices |
+| `src/look/materials.js` | Named materials: colour, roughness, metalness, weathering |
+| `src/look/shaders/frameUniforms.wgsl.js` | Per-frame uniforms, haze, tone mapping |
+| `src/look/shaders/lighting.wgsl.js` | Sun shadows, sky occlusion under eaves, bounce light, highlights |
+| `src/look/shaders/brick, wood, stone, gold, tile .wgsl.js` | One file per material look |
+| `src/look/shaders/architecture.wgsl.js` | Picks the material per vertex and lights it |
+| `src/look/shaders/sky.wgsl.js`, `blockout.wgsl.js`, `noise.wgsl.js` | Sky, temporary blocks, shared noise |
 
 ## Easy first tweaks
 
@@ -76,7 +93,7 @@ Crowd size, number of vendors and film look strength arrive in later steps.
 | Step | State |
 |---|---|
 | 1. References, layout, walkable blockout | done |
-| 2. Lighting, paving, architecture parts (one pagoda, Krishna Mandir) | |
+| 2. Lighting, paving, architecture parts (one pagoda, Krishna Mandir) | done |
 | 3. All monuments, palace, houses | |
 | 4. Detail levels, performance on Medium | |
 | 5. Puddles, Manga Hiti water | |

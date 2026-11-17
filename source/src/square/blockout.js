@@ -1,9 +1,10 @@
 // TEMPORARY (step 1 of the work order): rough massing of every monument as plain blocks, read from layout.js,
-// so the square can be walked before the real generators exist. Each monument's entry is replaced by its own
-// file in monuments/ in steps 2 and 3. Depends on layout.js and blocks.js.
+// so the square can be walked before the real generators exist. A monument with its own file in monuments/
+// is skipped here; the rest are replaced in step 3. Depends on layout.js and blocks.js.
 
 import { monumentLayout } from './layout.js';
 import { createBlock, placeInMonument, blockColors } from './blocks.js';
+import { monumentBuilders } from '../monuments/allMonuments.js';
 
 const stepRiseMeters = 0.42; // a plinth step you can walk up
 const roofOverhangMeters = 1.2;
@@ -195,6 +196,8 @@ const massingByMonument = {
 
 export function buildMonumentBlockout() {
   const blocks = [];
-  for (const row of monumentLayout) massingByMonument[row.name](blocks, row);
+  for (const row of monumentLayout) {
+    if (!monumentBuilders[row.name]) massingByMonument[row.name](blocks, row);
+  }
   return blocks;
 }

@@ -43,6 +43,18 @@ All temples on the west side face east toward the palace. North to south:
 
 Left out to keep the scope small (they exist, but are not modeled): Bhai Dega, the small Krishna temple near the bell, and the smaller shrines and chaityas around the square.
 
+## Architecture parts
+
+| Part | Based on | Notes |
+|---|---|---|
+| Roof struts (tunala) | Modern close-ups of Patan struts | A many-armed deity on a small attendant, under a canopy. The figures are generic **(plausible)**. Each strut does not show its real, individual deity. |
+| Eave bells and leaf clappers | Period photos of Patan pagodas | Spacing is about 1.1 m **(plausible)**. |
+| Pataka banner | Photos of Patan temples | Follows the roof slopes down the front. Its width is an estimate. |
+| Doorways and toranas | Modern close-ups | Three nested carved frames, lintels reaching past the jambs. The torana is gilded on the front door and wooden on the sides **(plausible)**. |
+| Stair guardians | Photos of Char Narayan and Vishwanath | Seated lions and elephants are simplified. |
+| Krishna Mandir tiers | EAP166, Wikipedia | Two colonnaded storeys with kiosks crowned by small shikharas, and the central tower. Pillar counts are approximate. |
+| Paving | Period photos | Brick herringbone with dust-filled joints and worn paths. |
+
 ## Surroundings
 
 | Item | Based on | Notes |

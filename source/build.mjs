@@ -38,8 +38,8 @@ function stripWgsl(code) {
     .replace(/\/\*[^]*?\*\//g, '')
     .replace(/\/\/[^\n]*/g, '')
     .replace(/\s+/g, ' ')
-    .replace(/ ?([{}()\[\];,:=+\-*\/<>&|!%@.^~?]) ?/g, '$1')
-    .trim();
+    .replace(/ ?([{}()\[\];,:=+\-*\/<>&|!%@.^~?]) ?/g, '$1');
+  // no trim: a space next to a \${...} interpolation may separate two words ("case \${id}u")
 }
 
 function staticParts(literal) {

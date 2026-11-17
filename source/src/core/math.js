@@ -63,19 +63,42 @@ export function perspectiveReverseZ(out, verticalFieldOfView, aspect, near) {
 
 // View matrix of a camera at `position` turned by yaw (0 looks north, along -z; positive turns east)
 // and pitch (positive looks up).
+const lookDirection = [0, 0, -1], worldUp = [0, 1, 0];
 export function viewFromYawPitch(out, position, yaw, pitch) {
-  const cosYaw = Math.cos(yaw), sinYaw = Math.sin(yaw), cosPitch = Math.cos(pitch), sinPitch = Math.sin(pitch);
-  // camera axes in world space: right, up, back (the camera looks along -back)
-  const rightX = cosYaw, rightY = 0, rightZ = sinYaw;
-  const backX = -sinYaw * cosPitch, backY = -sinPitch, backZ = cosYaw * cosPitch;
+  lookDirection[0] = Math.sin(yaw) * Math.cos(pitch);
+  lookDirection[1] = Math.sin(pitch);
+  lookDirection[2] = -Math.cos(yaw) * Math.cos(pitch);
+  return viewLookingAlong(out, position, lookDirection, worldUp);
+}
+
+// Orthographic projection of the box [left, right] x [bottom, top] x [-near, -far] in view space,
+// with depth 0 at the near plane and 1 at the far plane (WebGPU clip space).
+export function orthographic(out, left, right, bottom, top, near, far) {
+  out.fill(0);
+  out[0] = 2 / (right - left);
+  out[5] = 2 / (top - bottom);
+  out[10] = -1 / (far - near);
+  out[12] = -(right + left) / (right - left);
+  out[13] = -(top + bottom) / (top - bottom);
+  out[14] = -near / (far - near);
+  out[15] = 1;
+  return out;
+}
+
+// View matrix of an eye looking along `direction`, with `up` roughly up on screen.
+export function viewLookingAlong(out, eye, direction, up) {
+  const length = Math.hypot(direction[0], direction[1], direction[2]);
+  const backX = -direction[0] / length, backY = -direction[1] / length, backZ = -direction[2] / length;
+  let rightX = up[1] * backZ - up[2] * backY, rightY = up[2] * backX - up[0] * backZ, rightZ = up[0] * backY - up[1] * backX;
+  const rightLength = Math.hypot(rightX, rightY, rightZ);
+  rightX /= rightLength; rightY /= rightLength; rightZ /= rightLength;
   const upX = backY * rightZ - backZ * rightY, upY = backZ * rightX - backX * rightZ, upZ = backX * rightY - backY * rightX;
-  const [x, y, z] = [position[0], position[1], position[2]];
   out[0] = rightX; out[1] = upX; out[2] = backX; out[3] = 0;
   out[4] = rightY; out[5] = upY; out[6] = backY; out[7] = 0;
   out[8] = rightZ; out[9] = upZ; out[10] = backZ; out[11] = 0;
-  out[12] = -(rightX * x + rightY * y + rightZ * z);
-  out[13] = -(upX * x + upY * y + upZ * z);
-  out[14] = -(backX * x + backY * y + backZ * z);
+  out[12] = -(rightX * eye[0] + rightY * eye[1] + rightZ * eye[2]);
+  out[13] = -(upX * eye[0] + upY * eye[1] + upZ * eye[2]);
+  out[14] = -(backX * eye[0] + backY * eye[1] + backZ * eye[2]);
   out[15] = 1;
   return out;
 }

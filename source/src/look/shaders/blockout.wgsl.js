@@ -1,10 +1,11 @@
 // TEMPORARY (step 1): WGSL for the plain massing blocks. Each instance stretches, tapers and turns the unit
-// prism; faces are lit by the sun, the sky and the warm bounce from the bricks, then hazed.
-// Replaced by the material shaders in step 2. Depends on frameUniforms.wgsl.js.
+// prism; faces are lit like everything else (lighting.wgsl.js), then hazed.
+// Replaced by the material shaders in step 2. Depends on frameUniforms.wgsl.js and lighting.wgsl.js.
 
 import { frameUniformsWgsl } from './frameUniforms.wgsl.js';
+import { lightingWgsl } from './lighting.wgsl.js';
 
-export const blockoutWgsl = frameUniformsWgsl + /* wgsl */ `
+export const blockoutWgsl = frameUniformsWgsl + lightingWgsl + /* wgsl */ `
 struct BlockVaryings {
   @builtin(position) clipPosition: vec4f,
   @location(0) worldPosition: vec3f,
@@ -43,9 +44,11 @@ struct BlockVaryings {
     baseColor *= 1.0 - 0.25 * gridLine;
   }
 
-  let sunlight = frame.sunColor.rgb * max(dot(normal, frame.sunDirection.xyz), 0.0);
-  let skyLight = mix(frame.groundBounceColor.rgb, frame.skyZenithColor.rgb * 1.6, normal.y * 0.5 + 0.5);
-  let lit = baseColor * (sunlight + skyLight);
-  return toneMapToDisplay(applyHaze(lit, input.worldPosition));
+  var surface: SurfaceLook;
+  surface.albedo = baseColor;
+  surface.roughness = 0.9;
+  surface.metalness = 0.0;
+  surface.occlusion = 1.0;
+  return toneMapToDisplay(applyHaze(shadeSurface(surface, input.worldPosition, normal, normal), input.worldPosition));
 }
 `;

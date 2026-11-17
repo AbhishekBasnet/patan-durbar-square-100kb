@@ -4,7 +4,7 @@
 
 import { squareBounds } from './layout.js';
 import { createBlock, rotationForFacing, blockColors } from './blocks.js';
-import { createRandom, mix } from '../core/math.js';
+import { createRandom } from '../core/math.js';
 
 const houseWidthMetres = [4, 7.5];
 const houseDepthMetres = [7, 10];
@@ -92,10 +92,5 @@ export function buildSurroundings() {
   const blocks = [];
   const random = createRandom(surroundingsSeed);
   for (const frontage of frontages) addFrontage(blocks, random, frontage);
-  // the ground: one wide slab of brick paving under everything
-  blocks.push(createBlock({
-    x: mix(west, east, 0.5), y: -1, z: mix(north, south, 0.5), alongFront: 260, across: 260, height: 1,
-    color: blockColors.paving, isSolid: false,
-  }));
   return blocks;
 }

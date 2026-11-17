@@ -1,4 +1,4 @@
-// WGSL shared by every scene shader: the per-frame uniforms (camera, sun, sky, haze) and the final
+// WGSL shared by every scene shader: the per-frame uniforms (camera, sun, sky, haze, light maps) and the final
 // colour steps (haze, tone mapping). The float layout must match renderer.js and lighting.js.
 // Depends on nothing.
 
@@ -14,6 +14,8 @@ struct FrameUniforms {
   groundBounceColor: vec4f,
   hazeColorAndDensity: vec4f,
   screenSize: vec4f, // width, height, 1 / width, 1 / height
+  sunShadowMatrix: mat4x4f, // world to the sun's shadow map
+  skyOcclusionMatrix: mat4x4f, // world to the top-down height map
 }
 @group(0) @binding(0) var<uniform> frame: FrameUniforms;
 

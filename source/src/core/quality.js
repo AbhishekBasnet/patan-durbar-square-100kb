@@ -10,18 +10,24 @@ export const qualityPresets = {
     name: 'high',
     antialiasingSamples: 4,
     maximumRenderPixels: 2560 * 1440,
+    shadowMapSize: 4096,
+    skyOcclusionMapSize: 1024,
   },
   // the target: Intel Iris Xe (12th gen Core) and Radeon 680M at 1920x1080, 60 fps
   medium: {
     name: 'medium',
     antialiasingSamples: 4,
     maximumRenderPixels: 1920 * 1080,
+    shadowMapSize: 2048,
+    skyOcclusionMapSize: 1024,
   },
   // older integrated graphics and phones: starts below full resolution
   low: {
     name: 'low',
     antialiasingSamples: 1,
     maximumRenderPixels: 1280 * 720,
+    shadowMapSize: 1024,
+    skyOcclusionMapSize: 512,
   },
 };
 
