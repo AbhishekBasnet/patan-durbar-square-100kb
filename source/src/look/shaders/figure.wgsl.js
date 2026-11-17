@@ -1,35 +1,32 @@
-// WGSL for the figures: the vendors and the pigeons (figures.js builds the meshes). The vertex stage poses each
-// body part about its pivot (a vendor sitting, a pigeon pecking or flying); the fragment stage colours it from
-// its instance and lights it like the buildings. Also each figure's long golden-hour shadow on the paving,
-// cast only when the figure sits in sunlight, and a soft contact shadow under it.
+// WGSL for the pigeons (animals.js builds the mesh): the vertex stage poses the head and wings about their
+// pivots (pecking or flying); the fragment stage colours the bird from its instance and lights it like the
+// buildings. Also each pigeon's long golden-hour shadow on the paving, cast only when it stands in sunlight,
+// and a soft contact shadow under it.
 // Depends on frameUniforms and lighting WGSL, and figures.js (part pivots).
 
 import { frameUniformsWgsl } from './frameUniforms.wgsl.js';
 import { lightingWgsl } from './lighting.wgsl.js';
-import { packPartPivots, bodyPart, bodyPartCount, figureKind, colorSlot, pose } from '../../life/figures.js';
+import { packPartPivots, bodyPart, colorSlot, pose } from '../../life/figures.js';
 
 const pivotTable = packPartPivots();
 const pivotConstants = Array.from({ length: pivotTable.length / 4 }, (_, index) => 'vec4f(' + pivotTable.slice(index * 4, index * 4 + 4).map((value) => +value.toFixed(3)).join(',') + ')').join(',');
-// how tall and wide each kind of figure is, for its ground shadow: [height, width]
-const shadowSizes = [[0.75, 0.42], [0.2, 0.18]]; // a sitting person, a pigeon
+// how tall and wide a pigeon is, for its ground shadow: [height, width]
+const shadowSizes = [[0.2, 0.18]]; // a pigeon
 // (built here, not inside the WGSL: the build cannot see through a template literal nested in a WGSL one)
 const shadowSizeConstants = shadowSizes.map(([height, width]) => 'vec2f(' + height + ',' + width + ')').join(',');
 
 export const figureWgsl = frameUniformsWgsl + lightingWgsl + /* wgsl */ `
 const partPivots = array<vec4f, ${pivotTable.length / 4}>(${pivotConstants});
 const shadowSizes = array<vec2f, ${shadowSizes.length}>(${shadowSizeConstants});
-const hairColor = vec3f(0.035, 0.03, 0.028);
-const darkColor = vec3f(0.04, 0.04, 0.045); // a pigeon's beak
+const beakColor = vec3f(0.04, 0.04, 0.045);
 
 struct FigureInstance {
   @location(3) positionAndFacing: vec4f,
   @location(4) poseAndMotion: vec4f, // pose, phase, scale, 0
-  @location(5) kindAndAccessories: vec2u,
-  @location(6) topColor: vec4f,
-  @location(7) bottomColor: vec4f,
-  @location(8) hatColor: vec4f,
-  @location(9) accentColor: vec4f,
-  @location(10) skinColor: vec4f,
+  @location(5) accessories: u32,
+  @location(6) bodyColor: vec4f,
+  @location(7) legColor: vec4f,
+  @location(8) wingColor: vec4f,
 }
 
 struct FigureVaryings {
@@ -39,7 +36,7 @@ struct FigureVaryings {
   @location(2) @interpolate(flat) color: vec3f,
 }
 
-// Turns point p about a pivot in the x-y plane (legs, arms, heads: +x toward +y) or, for wings,
+// Turns point p about a pivot in the x-y plane (the head: +x toward +y) or, for wings,
 // in the y-z plane.
 fn turnAboutPivot(point: vec3f, pivot: vec2f, angle: f32, isWing: bool) -> vec3f {
   let cosine = cos(angle);
@@ -52,25 +49,15 @@ fn turnAboutPivot(point: vec3f, pivot: vec2f, angle: f32, isWing: bool) -> vec3f
   return vec3f(pivot.x + relative.x * cosine - relative.y * sine, pivot.y + relative.x * sine + relative.y * cosine, point.z);
 }
 
-// The angle a body part takes in a pose, and how far the whole figure sinks (sitting).
-fn partAngle(kind: u32, part: u32, figurePose: u32, phase: f32, pivot: vec4f) -> f32 {
-  let isLeg = part == ${bodyPart.leftLeg}u || part == ${bodyPart.rightLeg}u;
-  let isArm = part == ${bodyPart.leftArm}u || part == ${bodyPart.rightArm}u;
-  if (kind == ${figureKind.person}u) {
-    // sitting: thighs forward along the ground, hands resting forward, the head nodding now and then
-    return select(select(-0.06 * sin(phase * 0.3), 0.55, isArm), 1.45, isLeg);
-  }
+// The angle the head or a wing takes: wings beat in flight, the head pecks on the ground.
+fn partAngle(part: u32, figurePose: u32, phase: f32, pivot: vec4f) -> f32 {
   if (figurePose == ${pose.fly}u) {
     if (part == ${bodyPart.leftWing}u) { return sin(phase) * pivot.z; }
     if (part == ${bodyPart.rightWing}u) { return -sin(phase) * pivot.z; }
     return 0.0;
   }
-  if (part == ${bodyPart.head}u) { return -max(sin(phase), 0.0) * pivot.z; } // pecking
+  if (part == ${bodyPart.head}u) { return -max(sin(phase), 0.0) * pivot.z; }
   return 0.0;
-}
-
-fn sinking(kind: u32, scale: f32) -> f32 {
-  return select(0.0, 0.5 * scale, kind == ${figureKind.person}u);
 }
 
 fn placeInWorld(local: vec3f, instance: FigureInstance) -> vec3f {
@@ -86,10 +73,9 @@ fn placeInWorld(local: vec3f, instance: FigureInstance) -> vec3f {
   instance: FigureInstance,
 ) -> FigureVaryings {
   var output: FigureVaryings;
-  let kind = instance.kindAndAccessories.x;
   let accessoryId = materialData.w;
-  // an accessory this figure does not wear collapses to a point, which draws nothing
-  if (accessoryId > 0u && (instance.kindAndAccessories.y & (1u << accessoryId)) == 0u) {
+  // a part this bird is not showing (folded or spread wings) collapses to a point, which draws nothing
+  if (accessoryId > 0u && (instance.accessories & (1u << accessoryId)) == 0u) {
     output.clipPosition = vec4f(0.0, 0.0, 0.0, 1.0);
     return output;
   }
@@ -97,27 +83,25 @@ fn placeInWorld(local: vec3f, instance: FigureInstance) -> vec3f {
   let phase = instance.poseAndMotion.y;
   let scale = instance.poseAndMotion.z;
   let part = materialData.z;
-  let pivot = partPivots[kind * ${bodyPartCount}u + part];
+  let pivot = partPivots[part]; // the pigeon is the only kind: its pivots come first
   var local = position;
   var normal = normalAndOcclusion.xyz;
   if (part != ${bodyPart.fixed}u) {
-    let angle = partAngle(kind, part, figurePose, phase, pivot);
+    let angle = partAngle(part, figurePose, phase, pivot);
     let isWing = part == ${bodyPart.leftWing}u || part == ${bodyPart.rightWing}u;
     local = turnAboutPivot(local, pivot.xy, angle, isWing);
     normal = turnAboutPivot(normal, vec2f(0.0), angle, isWing);
   }
-  local = local * scale - vec3f(0.0, sinking(kind, scale), 0.0);
+  local = local * scale;
   let worldPosition = placeInWorld(local, instance);
   output.worldPosition = worldPosition;
   output.clipPosition = frame.viewProjection * vec4f(worldPosition, 1.0);
   output.normalAndOcclusion = vec4f(placeInWorld(normal, instance) - instance.positionAndFacing.xyz, normalAndOcclusion.w);
   let slot = materialData.x;
-  var color = select(darkColor, hairColor, slot == ${colorSlot.hair}u);
-  if (slot == ${colorSlot.skin}u) { color = instance.skinColor.rgb; }
-  if (slot == ${colorSlot.top}u) { color = instance.topColor.rgb; }
-  if (slot == ${colorSlot.bottom}u) { color = instance.bottomColor.rgb; }
-  if (slot == ${colorSlot.hat}u) { color = instance.hatColor.rgb; }
-  if (slot == ${colorSlot.accent}u) { color = instance.accentColor.rgb; }
+  var color = beakColor;
+  if (slot == ${colorSlot.top}u) { color = instance.bodyColor.rgb; }
+  if (slot == ${colorSlot.bottom}u) { color = instance.legColor.rgb; }
+  if (slot == ${colorSlot.accent}u) { color = instance.wingColor.rgb; }
   output.color = color;
   return output;
 }
@@ -147,13 +131,12 @@ const longestShadowMetres = 9.0;
 
 @vertex fn figureShadowVertex(@builtin(vertex_index) vertexIndex: u32, instance: FigureInstance) -> ShadowVaryings {
   var output: ShadowVaryings;
-  let kind = instance.kindAndAccessories.x;
-  let size = shadowSizes[kind] * vec2f(instance.poseAndMotion.z);
+  let size = shadowSizes[0] * vec2f(instance.poseAndMotion.z);
   let corners = array<vec2f, 6>(vec2f(-1.0, 0.0), vec2f(1.0, 0.0), vec2f(1.0, 1.0), vec2f(-1.0, 0.0), vec2f(1.0, 1.0), vec2f(-1.0, 1.0));
   let corner = corners[vertexIndex % 6u];
   let isContact = vertexIndex >= 6u;
   let feet = instance.positionAndFacing.xyz;
-  // flying birds cast nothing
+  // flying birds cast nothing on the paving
   if (size.x <= 0.0 || feet.y > 1.5) {
     output.clipPosition = vec4f(0.0, 0.0, 0.0, 1.0);
     return output;
@@ -167,7 +150,7 @@ const longestShadowMetres = 9.0;
   } else {
     let stripLength = min(size.x / tan(asin(frame.sunDirection.y)), longestShadowMetres);
     ground = feet.xz + side * corner.x * size.y * 0.5 + awayFromSun * (corner.y * stripLength - size.y * 0.2);
-    // only figures sitting in sunlight throw a shadow of their own
+    // only birds standing in sunlight throw a shadow of their own
     output.strength = sunShadowStrength * sunVisibility(feet + vec3f(0.0, size.x * 0.6, 0.0), vec3f(0.0, 1.0, 0.0));
   }
   output.clipPosition = frame.viewProjection * vec4f(ground.x, feet.y + 0.012, ground.y, 1.0);

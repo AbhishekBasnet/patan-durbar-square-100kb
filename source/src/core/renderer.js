@@ -31,7 +31,7 @@ export async function openGpu() {
 
 // detailSelector (lod.js) says which chunks and levels to draw each frame, and with what cross-fade;
 // reflectionSelector does the same for the mirrored scene. waterField (square/water.js) holds the water;
-// streetLife (life/streetLife.js) the figures in view, one instance list per mesh.
+// streetLife (life/streetLife.js) the pigeons in view.
 export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices, detailSelector, reflectionSelector, waterField, streetLife }) {
   const context = canvas.getContext('webgpu');
   const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -151,8 +151,8 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const figureInstanceLayout = (shaderLocationOffset) => ({
     arrayStride: floatsPerFigureInstance * 4, stepMode: 'instance',
     attributes: [
-      attribute(3, 0, 'float32x4'), attribute(4, 16, 'float32x4'), attribute(5, 32, 'uint32x2'),
-      ...[6, 7, 8, 9, 10].map((location, index) => attribute(location, 48 + index * 4, 'unorm8x4')),
+      attribute(3, 0, 'float32x4'), attribute(4, 16, 'float32x4'), attribute(5, 32, 'uint32'),
+      ...[6, 7, 8].map((location, index) => attribute(location, 36 + index * 4, 'unorm8x4')),
     ].map((entry) => ({ ...entry, shaderLocation: entry.shaderLocation + shaderLocationOffset })),
   });
   const figureBuffers = [architectureBuffers[0], figureInstanceLayout(0)];

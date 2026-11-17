@@ -3,7 +3,7 @@
 // Depends on meshBuilder.js, figures.js and math.js.
 
 import { MeshBuilder } from '../core/meshBuilder.js';
-import { part, colorSlot, bodyPart, accessory, figureKind, pose } from './figures.js';
+import { part, colorSlot, bodyPart, accessory, pose } from './figures.js';
 import { createRandom } from '../core/math.js';
 
 const pigeonLengthMetres = 0.3;
@@ -44,7 +44,7 @@ export function createPigeons(quality, addFigure) {
     for (let index = 0; index < Math.round(quality.pigeonsPerFlock * share); index++) {
       const grey = random.between(0.35, 0.55);
       const figure = addFigure({
-        kind: figureKind.pigeon, x: centreX, z: centreZ, facing: random.between(0, 6.28), scale: random.between(0.9, 1.1),
+        x: centreX, z: centreZ, facing: random.between(0, 6.28), scale: random.between(0.9, 1.1),
         colors: { top: [grey, grey, grey * 1.1], bottom: [0.6, 0.3, 0.3], accent: [grey * 0.8, grey * 0.8, grey * 0.85] }, accessories: foldedWingsMask,
       });
       flock.birds.push({ figure, offsetX: random.between(-2.5, 2.5), offsetZ: random.between(-2.5, 2.5), angle: random.between(0, 6.28), height: random.between(...pigeonFlightHeightMetres), peckRate: random.between(2.5, 4.5) });

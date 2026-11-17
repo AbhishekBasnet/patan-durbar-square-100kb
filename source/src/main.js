@@ -12,7 +12,6 @@ import { buildSurroundings } from './square/surroundings.js';
 import { addPaving } from './square/paving.js';
 import { createWaterField } from './square/water.js';
 import { createStreetLife } from './life/streetLife.js';
-import { addVendorStalls } from './life/vendors.js';
 import { buildMonuments } from './monuments/allMonuments.js';
 import { MeshBuilder } from './core/meshBuilder.js';
 import { writeLightingUniforms, computeLightMapMatrices } from './look/lighting.js';
@@ -46,9 +45,8 @@ async function start() {
   const architecture = new MeshBuilder();
   const { solidBlocks, groundHoles } = buildMonuments(architecture);
   const houseBlocks = buildSurroundings(architecture);
-  const stallBlocks = addVendorStalls(architecture, quality);
   addPaving(architecture, groundHoles);
-  const camera = createWalkingCamera(buildColliders([...solidBlocks, ...houseBlocks, ...stallBlocks]), squareBounds, groundHoles);
+  const camera = createWalkingCamera(buildColliders([...solidBlocks, ...houseBlocks]), squareBounds, groundHoles);
   const lightMapMatrices = computeLightMapMatrices();
 
   await showLoadingStep('Lighting the late afternoon…', 0.8);

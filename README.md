@@ -2,7 +2,7 @@
 
 A walkable recreation of Patan Durbar Square (Lalitpur, Nepal) as it was on an ordinary afternoon in the mid-1980s. It runs in the browser. Everything is made from code: no images, models or sound files. The whole square is one HTML file.
 
-> **Work in progress: step 6 of 7.** Vendors sit with their goods around the square and pigeons peck and take flight. Every monument, the palace and the houses are built, with detail levels by distance. One big puddle from a passing shower mirrors Krishna Mandir, and Manga Hiti's spouts pour into knee-deep water you can wade into. It holds a steady 60 fps on Medium on Intel Iris Xe (see [PERFORMANCE.md](PERFORMANCE.md)). Next: street life.
+> **Work in progress: step 6 of 7.** Pigeons peck on the paving and take flight when you come close. Every monument, the palace and the houses are built, with detail levels by distance. One big puddle from a passing shower mirrors Krishna Mandir, and Manga Hiti's spouts pour into knee-deep water you can wade into. It holds a steady 60 fps on Medium on Intel Iris Xe (see [PERFORMANCE.md](PERFORMANCE.md)). Next: street life.
 
 ## Try it
 
@@ -35,7 +35,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **98.5 KB** minified, 36.8 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **89.6 KB** minified, 33.7 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -78,13 +78,11 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/look/shaders/brick, wood, stone, gold, tile .wgsl.js` | One file per material look |
 | `src/look/shaders/architecture.wgsl.js` | Picks the material per vertex and lights it |
 | `src/look/shaders/water.wgsl.js` | The puddle and Manga Hiti's water: outlines, Fresnel reflections, steady rings where the streams land, foam, footstep ripples, wind, the spout streams |
-| `src/look/shaders/figure.wgsl.js` | Vendors and pigeons: posed body parts, lighting, long golden-hour ground shadows |
+| `src/look/shaders/figure.wgsl.js` | The pigeons: head and wings posed on the GPU, lighting, ground shadows |
 | `src/look/shaders/sky.wgsl.js`, `noise.wgsl.js` | Sky, shared noise |
-| `src/life/figures.js` | The figure generator: body parts, colour slots, accessories, the person mesh |
-| `src/life/clothing.js` | 1980s outfits: daura-suruwal and dhaka topi, saris, haku patasi, shawls |
-| `src/life/vendors.js` | Vendor spots, their goods on cloth, mats and nanglo trays, and the sellers |
+| `src/life/figures.js` | The figure part system: body parts, colour slots, accessories, pivots |
 | `src/life/animals.js` | Pigeon flocks that take off when you come close |
-| `src/life/streetLife.js` | Creates the figures, moves the pigeons, packs what is in view for drawing |
+| `src/life/streetLife.js` | Creates the pigeons, moves them, packs the ones in view for drawing |
 
 ## Easy first tweaks
 
@@ -98,7 +96,6 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | Detail switching distances | `lodSwitchDistances` in `src/core/lod.js` |
 | Move or turn a monument | its row (`x`, `z`, `facingDegrees`) in `src/square/layout.js` |
 
-| Number of vendors | `vendorCount` per preset in `src/core/quality.js` |
 | Pigeons per flock | `pigeonsPerFlock` per preset in `src/core/quality.js` |
 
 Film look strength arrives in step 7.
@@ -112,7 +109,7 @@ Film look strength arrives in step 7.
 | 3. All monuments, palace, houses | done |
 | 4. Detail levels, performance on Medium | done |
 | 5. Water: one showcase puddle, knee-deep water at Manga Hiti | done |
-| 6. Street life: vendors and pigeons (by choice: no crowds, other animals, vehicles or sound) | done |
+| 6. Street life: pigeons only (by choice: no people, other animals, vehicles or sound) | done |
 | 7. Film look, polish, verification | |
 
 See [REFERENCES.md](REFERENCES.md) for what each monument is based on, and [LICENSE](LICENSE). This project adapts parts of [Abyssal Garden](https://github.com/Noniv/abyssal-garden).

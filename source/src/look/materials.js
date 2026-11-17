@@ -16,17 +16,6 @@ export const material = {
   bronze: 9, // bells and old brass, darker than gilding
   redCloth: 10, // faded red and ochre paint, offering cloth
   carvedStone: 11, // statues and carved stone: like stone, without the block joints
-  clothRed: 12, // cloth, mats and goods
-  clothBlue: 13,
-  produceGreen: 14,
-  produceRed: 15,
-  produceOrange: 16, // oranges, marigolds
-  produceYellow: 17, // corn, lentils, turmeric
-  terracotta: 18, // clay pots
-  straw: 19, // straw mats, bamboo trays and baskets
-  rice: 20,
-  paintedSign: 21, // hand-painted signboards with Devanagari lettering (drawn by the shader)
-  darkMetal: 22, // sewing machines, kettles, braziers
 };
 
 // Each row: base colour (linear red, green, blue), roughness, metalness, weathering (dirt, moss and wear).
@@ -43,15 +32,4 @@ export const materialTable = [
   [0.45, 0.30, 0.13, 0.45, 1, 0.6], // bronze
   [0.45, 0.10, 0.05, 0.9, 0, 0.5], // red cloth and paint
   [0.2, 0.185, 0.16, 0.8, 0, 0.9], // carved stone
-  [0.5, 0.1, 0.07, 0.9, 0, 0.4], // red cloth
-  [0.12, 0.2, 0.4, 0.9, 0, 0.4], // blue cloth
-  [0.14, 0.3, 0.06, 0.6, 0, 0.2], // greens
-  [0.55, 0.08, 0.05, 0.5, 0, 0.2], // tomatoes, chillies
-  [0.8, 0.35, 0.05, 0.5, 0, 0.1], // oranges, marigolds
-  [0.75, 0.6, 0.15, 0.7, 0, 0.2], // corn, lentils
-  [0.45, 0.2, 0.1, 0.85, 0, 0.5], // terracotta
-  [0.5, 0.4, 0.2, 0.9, 0, 0.5], // straw and bamboo
-  [0.75, 0.72, 0.62, 0.9, 0, 0.2], // rice
-  [0.15, 0.25, 0.42, 0.8, 0, 0.7], // painted signboard
-  [0.05, 0.05, 0.055, 0.5, 0.6, 0.5], // dark metal
 ];

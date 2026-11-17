@@ -49,10 +49,6 @@ Steady 60 fps. An earlier run of the same build had one hiccup (p99 33 ms, worst
 
 Reflections: the scene is drawn mirrored in the surface of the nearest water in view, at far detail, into a texture a third of the render size per side. The pass is skipped when no water is in view. On Low, water mirrors the sky and a tint of the buildings.
 
-## Step 6 (vendors and pigeons)
+## Step 6 (pigeons)
 
-| Preset | Frame avg / p99 / worst at 60 Hz | GPU avg / p99 / worst at 60 Hz |
-|---|---|---|
-| **Medium** | **16.67 / 16.80 / 16.80 ms** | **10.48 / 12.65 / 13.74 ms** |
-
-Steady 60 fps. The vendors' goods are built into the scene once. Sellers and pigeons are drawn as copies of one mesh each, near or far detail by distance, and only when in view. Each casts a soft ground shadow, long when it sits in sunlight.
+Vendors and pigeons measured a steady 60 fps on Medium (GPU 10.48 / 12.65 / 13.74 ms). At the user's request the vendors were then removed, and this lighter version was not benchmarked again. It draws strictly less than the measured one.
