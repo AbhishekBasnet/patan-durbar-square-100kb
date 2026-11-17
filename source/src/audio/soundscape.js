@@ -1,7 +1,7 @@
 // The mix: starts Web Audio on the first click (browsers require a gesture), places each sound where it comes
 // from and moves the listener with the camera. The wind blows everywhere in slow gusts; the eave bells of the
 // temples chime more when it gusts; Manga Hiti's water grows as you come near and fills the pit when you walk
-// down into it. M mutes. Depends on ambientSounds.js, layout.js and math.js.
+// down into it. Sound is on by default and M toggles it. Depends on ambientSounds.js, layout.js and math.js.
 
 import { createNoiseBuffer, startWind, startRunningWater, strikeBell } from './ambientSounds.js';
 import { monumentLayout } from '../square/layout.js';

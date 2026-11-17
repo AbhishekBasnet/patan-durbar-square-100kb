@@ -82,7 +82,7 @@ async function start() {
   };
 
   const input = createInput(canvas, {
-    onAnyInput: () => {},
+    onAnyInput: () => soundscape.start(), // sound is on from the first key or touch (browsers need one)
     toggleStats: () => {
       statsVisible = !statsVisible;
       statsLine.textContent = '';
