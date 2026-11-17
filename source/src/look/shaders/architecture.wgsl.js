@@ -25,6 +25,8 @@ const materialLooks = array<vec4f, ${materialTable.length * 2}>(${materialConsta
 // Two pipelines are made from this shader: the cross-fading one dithers, the other never discards (a shader
 // that can discard loses early depth testing on some integrated GPUs, even when it never does).
 override isCrossFading: bool = false;
+// The puddle reflection draws the scene upside down; everything at or below the water line is cut away.
+override isMirrored: bool = false;
 const ditherMatrix = array<f32, 16>(0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
 
 struct ArchitectureVaryings {
@@ -55,6 +57,7 @@ struct ArchitectureVaryings {
   // cross-fading between two detail levels: each keeps the pixels the other drops
   let pixel = vec2u(input.clipPosition.xy) % 4u;
   let ditherValue = (ditherMatrix[pixel.y * 4u + pixel.x] + 0.5) / 16.0;
+  if (isMirrored && input.worldPosition.y < 0.02) { discard; }
   if (isCrossFading && ((input.lodFade >= 0.0 && ditherValue >= input.lodFade) || (input.lodFade < 0.0 && ditherValue < -input.lodFade))) { discard; }
   let geometricNormal = normalize(input.normalAndOcclusion.xyz);
   let materialId = input.materialData.x;

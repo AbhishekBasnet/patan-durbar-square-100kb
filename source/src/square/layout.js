@@ -49,5 +49,5 @@ export const viewpoints = [
   { x: 10, z: -80, yawDegrees: 175, pitchDegrees: 2 }, // 3 north end by Manga Hiti, looking down the square
   { x: 1, z: -2, yawDegrees: 70, pitchDegrees: 9 }, // 4 the palace front seen from beside the temples
   { x: 31, z: 18, yawDegrees: 330, pitchDegrees: 12 }, // 5 inside Sundari Chowk
-  { x: 5, z: -11, yawDegrees: 262, pitchDegrees: 13 }, // 6 Char Narayan's carved front (a puddle view from step 5)
+  { x: 6.2, z: -16.0, yawDegrees: 328, pitchDegrees: -4 }, // 6 a puddle mirroring Krishna Mandir at golden hour
 ];

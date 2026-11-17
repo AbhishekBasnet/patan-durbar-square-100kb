@@ -66,6 +66,14 @@ The palace wings use the same generator as the houses: storeys with glazed bands
 | Houses around the square | 1969–77 photos | Three- and four-storey brick houses, some plastered. Shops with wooden shutters on the ground floor, latticed windows and a window row above, tile roofs on plain struts. Alleys end in more houses. Heights, widths and the shop/doorway mix are random within period-typical ranges **(plausible)**. |
 | Paving | Period photos | Brick paving. Real patterns and stone paths come in step 2. |
 
+## Water
+
+| Item | Based on | Notes |
+|---|---|---|
+| Puddles | The brief: a shower about an hour ago | About 16 puddles: at the feet of plinths, under dripping palace and house eaves, in worn dips, and in and around Manga Hiti's trough. Exact spots and sizes are **(plausible)**. |
+| Manga Hiti water | Photos of Manga Hiti | Three streams from the makara spouts into a stone trough, with water spilled on the pit floor. The trough's shape is **(plausible)**. |
+| Floating things | Marigold offerings, fallen leaves, straw from vendors' mats | One per puddle **(plausible)**. |
+
 ## People, props, animals
 
 Added in step 6. Each type will be listed here with what it is based on.

@@ -27,7 +27,8 @@ export const levelsPerChunk = 3; // near, middle, far
 
 // chunks: Float32Array of [centreX, centreY, centreZ, radius] per chunk.
 // levelRanges: Uint32Array of [first vertex, vertex count] for near, middle and far, per chunk.
-export function createDetailSelector({ chunkBounds, levelRanges, quality }) {
+// fixedLevel: always draw this level (the puddle reflection draws everything far).
+export function createDetailSelector({ chunkBounds, levelRanges, quality, fixedLevel = -1 }) {
   const chunkCount = chunkBounds.length / 4;
   const switchDistances = lodSwitchDistances[quality.name];
   const frustumPlanes = new Float32Array(16);
@@ -96,6 +97,10 @@ export function createDetailSelector({ chunkBounds, levelRanges, quality }) {
     selector.solidDrawCount = selector.fadingDrawCount = 0;
     for (let index = 0; index < visibleCount; index++) {
       const chunk = visibleOrder[index], distance = chunkDistances[chunk];
+      if (fixedLevel >= 0) {
+        addDraw(chunk, fixedLevel, 1);
+        continue;
+      }
       const towardMiddle = Math.min(Math.max((distance - switchDistances.nearToMiddle) / crossFadeBandMetres, 0), 1);
       const towardFar = Math.min(Math.max((distance - switchDistances.middleToFar) / crossFadeBandMetres, 0), 1);
       if (towardMiddle < 1) addDraw(chunk, 0, towardMiddle > 0 ? -towardMiddle : 1);
@@ -103,5 +108,7 @@ export function createDetailSelector({ chunkBounds, levelRanges, quality }) {
       if (towardFar > 0) addDraw(chunk, 2, towardFar < 1 ? towardFar : 1);
     }
   };
+  // Is a sphere inside the view of the last update? (the puddles ask, to skip their reflection)
+  selector.isSphereVisible = (x, y, z, radius) => !isOutsideView(x, y, z, radius);
   return selector;
 }

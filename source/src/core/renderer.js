@@ -1,11 +1,12 @@
-// The WebGPU renderer: opens the device, sizes the canvas within the preset's pixel budget, builds the sky
-// and architecture pipelines, draws the sun shadow map and sky occlusion map once at load, and draws
+// The WebGPU renderer: opens the device, sizes the canvas within the preset's pixel budget, builds the sky,
+// architecture and water pipelines, draws the mirrored scene for puddle reflections, draws the sun shadow map and sky occlusion map once at load, and draws
 // one frame per call. Optional GPU timestamps measure the frame for the H stats and the benchmark.
 // Depends on meshBuilder.js (vertex layout) and the WGSL in look/shaders/.
 
 import { bytesPerVertex } from './meshBuilder.js';
 import { skyWgsl } from '../look/shaders/sky.wgsl.js';
 import { architectureWgsl } from '../look/shaders/architecture.wgsl.js';
+import { waterWgsl, rippleEventCapacity } from '../look/shaders/water.wgsl.js';
 
 export const frameUniformFloatCount = 96; // matches FrameUniforms in frameUniforms.wgsl.js
 export const sunShadowMatrixOffset = 64;
@@ -25,8 +26,9 @@ export async function openGpu() {
   return { adapter, device, canMeasureGpuTime };
 }
 
-// detailSelector (lod.js) says which chunks and levels to draw each frame, and with what cross-fade.
-export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices, detailSelector }) {
+// detailSelector (lod.js) says which chunks and levels to draw each frame, and with what cross-fade;
+// reflectionSelector does the same for the mirrored scene. puddleField (puddles.js) holds the water.
+export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices, detailSelector, reflectionSelector, puddleField }) {
   const context = canvas.getContext('webgpu');
   const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
   const sampleCount = quality.antialiasingSamples;
@@ -56,32 +58,46 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
       { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
     ],
   });
-  const lodFadeBuffer = device.createBuffer({ size: Math.max(16, detailSelector.fades.byteLength), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
   const uniformsOnlyBindGroupLayout = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: allStages, buffer: {} }] });
-  const uniformBuffer = createUniformBuffer();
-  const sceneBindGroup = device.createBindGroup({
+  const createFadeBuffer = () => device.createBuffer({ size: Math.max(16, detailSelector.fades.byteLength), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+  const createSceneBindGroup = (uniforms, fades) => device.createBindGroup({
     layout: sceneBindGroupLayout,
     entries: [
-      { binding: 0, resource: { buffer: uniformBuffer } },
+      { binding: 0, resource: { buffer: uniforms } },
       { binding: 1, resource: sunShadowMap.createView() },
       { binding: 2, resource: comparisonSampler },
       { binding: 3, resource: skyOcclusionMap.createView() },
-      { binding: 4, resource: { buffer: lodFadeBuffer } },
+      { binding: 4, resource: { buffer: fades } },
     ],
   });
+  // the camera's view, and the mirrored view drawn into the puddle reflection
+  const uniformBuffer = createUniformBuffer(), lodFadeBuffer = createFadeBuffer();
+  const reflectionUniformBuffer = createUniformBuffer(), reflectionFadeBuffer = createFadeBuffer();
+  const sceneBindGroup = createSceneBindGroup(uniformBuffer, lodFadeBuffer);
+  const reflectionBindGroup = createSceneBindGroup(reflectionUniformBuffer, reflectionFadeBuffer);
   const scenePipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [sceneBindGroupLayout] });
+  // water: ripple events, the reflection image and its sampler
+  const waterBindGroupLayout = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: {} },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+    ],
+  });
+  const waterPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [sceneBindGroupLayout, waterBindGroupLayout] });
   const lightMapPipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsOnlyBindGroupLayout] });
 
   // ---- pipelines
   const modules = {};
   const shaderModule = (code) => (modules[code] ??= device.createShaderModule({ code }));
-  const createScenePipeline = (code, vertexEntry, fragmentEntry, buffers, depthStencil, cullMode = 'back', constants = {}) => device.createRenderPipeline({
-    layout: scenePipelineLayout,
+  // options: samples (1 for the reflection), layout, blend (water is drawn over the scene, premultiplied)
+  const createScenePipeline = (code, vertexEntry, fragmentEntry, buffers, depthStencil, cullMode = 'back', constants = {}, { samples = sampleCount, layout = scenePipelineLayout, blend } = {}) => device.createRenderPipeline({
+    layout,
     vertex: { module: shaderModule(code), entryPoint: vertexEntry, buffers },
-    fragment: { module: shaderModule(code), entryPoint: fragmentEntry, targets: [{ format: canvasFormat }], constants },
+    fragment: { module: shaderModule(code), entryPoint: fragmentEntry, targets: [{ format: canvasFormat, blend }], constants },
     primitive: { topology: 'triangle-list', cullMode },
     depthStencil: { format: depthFormat, ...depthStencil },
-    multisample: { count: sampleCount },
+    multisample: { count: samples },
   });
   // light maps use ordinary depth (nearer is smaller); the scene uses reverse-Z (nearer is greater)
   const createLightMapPipeline = (code, vertexEntry, buffers) => device.createRenderPipeline({
@@ -102,6 +118,28 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const architectureConstants = { shadowTapsPerAxis: quality.shadowTapsPerAxis, skyOcclusionTapCount: quality.skyOcclusionTapCount };
   const architecturePipeline = createScenePipeline(architectureWgsl, 'architectureVertex', 'architectureFragment', architectureBuffers, sceneDepth, 'back', architectureConstants);
   const crossFadingArchitecturePipeline = createScenePipeline(architectureWgsl, 'architectureVertex', 'architectureFragment', architectureBuffers, sceneDepth, 'back', { ...architectureConstants, isCrossFading: 1 });
+  // the mirror image flips every triangle's winding, so the reflection culls front faces instead
+  const hasReflection = quality.reflectionScale > 0;
+  const reflectionArchitecturePipeline = hasReflection && createScenePipeline(architectureWgsl, 'architectureVertex', 'architectureFragment', architectureBuffers, sceneDepth, 'front', { ...architectureConstants, isMirrored: 1 }, { samples: 1 });
+  const reflectionSkyPipeline = hasReflection && createScenePipeline(skyWgsl, 'skyVertex', 'skyFragment', [], { depthWriteEnabled: false, depthCompare: 'equal' }, 'none', {}, { samples: 1 });
+
+  const premultipliedBlend = { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' } };
+  const waterDepth = { depthWriteEnabled: false, depthCompare: 'greater' };
+  const waterOptions = { layout: waterPipelineLayout, blend: premultipliedBlend };
+  const puddlePipeline = createScenePipeline(waterWgsl, 'puddleVertex', 'puddleFragment', [{
+    arrayStride: 48, stepMode: 'instance', attributes: [attribute(0, 0, 'float32x4'), attribute(1, 16, 'float32x4'), attribute(2, 32, 'float32x4')],
+  }], waterDepth, 'none', { hasPlanarReflection: hasReflection ? 1 : 0, shadowTapsPerAxis: 1 }, waterOptions);
+  const streamPipeline = createScenePipeline(waterWgsl, 'streamVertex', 'streamFragment', [{
+    arrayStride: 32, stepMode: 'instance', attributes: [attribute(0, 0, 'float32x4'), attribute(1, 16, 'float32x4')],
+  }], waterDepth, 'none', {}, waterOptions);
+  const streamVertexCount = 12 * 6; // streamSegmentCount in water.wgsl.js, six corners per segment
+  const puddleBuffer = createBufferWithData(puddleField.puddleInstances, GPUBufferUsage.VERTEX);
+  const streamBuffer = createBufferWithData(puddleField.streamInstances, GPUBufferUsage.VERTEX);
+  const waterUniforms = new Float32Array((rippleEventCapacity + 1) * 4);
+  const waterUniformBuffer = device.createBuffer({ size: waterUniforms.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const reflectionSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+  let waterBindGroup; // rebuilt with the reflection image on resize
+
   const architectureLightMapPipeline = createLightMapPipeline(architectureWgsl, 'architectureDepthVertex', [{
     arrayStride: bytesPerVertex, attributes: [attribute(0, 0, 'float32x3')],
   }]);
@@ -125,6 +163,15 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
     drawList(pass, detailSelector.solidDraws, detailSelector.solidDrawCount);
     pass.setPipeline(crossFadingArchitecturePipeline);
     drawList(pass, detailSelector.fadingDraws, detailSelector.fadingDrawCount);
+  };
+  const drawWater = (pass) => {
+    pass.setBindGroup(1, waterBindGroup);
+    pass.setPipeline(puddlePipeline);
+    pass.setVertexBuffer(0, puddleBuffer);
+    pass.draw(6, puddleField.puddleCount);
+    pass.setPipeline(streamPipeline);
+    pass.setVertexBuffer(0, streamBuffer);
+    pass.draw(streamVertexCount, puddleField.streamCount);
   };
 
   // ---- draw both light maps once: the sun and the scene never move
@@ -170,7 +217,10 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   }
 
   // ---- render targets, rebuilt when the window size changes
-  let multisampleTexture, depthTexture;
+  let multisampleTexture, depthTexture, reflectionTexture, reflectionDepthTexture;
+  const reflectionColorAttachment = { view: null, loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] };
+  const reflectionDepthAttachment = { view: null, depthClearValue: 0, depthLoadOp: 'clear', depthStoreOp: 'discard' };
+  const reflectionPass = { colorAttachments: [reflectionColorAttachment], depthStencilAttachment: reflectionDepthAttachment };
   const colorAttachment = { view: null, resolveTarget: undefined, loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] };
   const depthAttachment = { view: null, depthClearValue: 0, depthLoadOp: 'clear', depthStoreOp: 'discard' };
   const scenePass = { colorAttachments: [colorAttachment], depthStencilAttachment: depthAttachment };
@@ -196,13 +246,36 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
       colorAttachment.view = multisampleTexture.createView();
       colorAttachment.storeOp = 'discard';
     }
+    // the puddle reflection, at a share of the render size (a 1 x 1 stand-in on Low)
+    reflectionTexture?.destroy();
+    reflectionDepthTexture?.destroy();
+    const reflectionWidth = hasReflection ? Math.max(2, Math.round(width * quality.reflectionScale)) : 1;
+    const reflectionHeight = hasReflection ? Math.max(2, Math.round(height * quality.reflectionScale)) : 1;
+    reflectionTexture = device.createTexture({ size: [reflectionWidth, reflectionHeight], format: canvasFormat, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+    reflectionDepthTexture = device.createTexture({ size: [reflectionWidth, reflectionHeight], format: depthFormat, usage: GPUTextureUsage.RENDER_ATTACHMENT });
+    reflectionColorAttachment.view = reflectionTexture.createView();
+    reflectionDepthAttachment.view = reflectionDepthTexture.createView();
+    waterBindGroup = device.createBindGroup({
+      layout: waterBindGroupLayout,
+      entries: [{ binding: 0, resource: { buffer: waterUniformBuffer } }, { binding: 1, resource: reflectionTexture.createView() }, { binding: 2, resource: reflectionSampler }],
+    });
   };
   renderer.resize();
 
   const commandBuffers = [null];
-  renderer.render = (frameUniforms) => {
+  // with a reflection pass, the timing runs from its start to the end of the scene pass
+  const timedReflectionPass = canMeasureGpuTime ? { ...reflectionPass, timestampWrites: { querySet: timestampQuerySet, beginningOfPassWriteIndex: 0 } } : reflectionPass;
+  const sceneEndTimedPass = canMeasureGpuTime ? { ...scenePass, timestampWrites: { querySet: timestampQuerySet, endOfPassWriteIndex: 1 } } : scenePass;
+
+  // frameUniforms / reflectionUniforms: the camera and the mirrored camera (main.js); drawReflection: false when
+  // no puddle is in view, which saves the whole reflection pass.
+  renderer.render = (frameUniforms, reflectionUniforms, drawReflection) => {
     device.queue.writeBuffer(uniformBuffer, 0, frameUniforms);
     device.queue.writeBuffer(lodFadeBuffer, 0, detailSelector.fades);
+    waterUniforms.set(puddleField.rippleEvents);
+    waterUniforms[rippleEventCapacity * 4] = puddleField.rippleCapacity;
+    waterUniforms[rippleEventCapacity * 4 + 1] = puddleField.windGustStrength;
+    device.queue.writeBuffer(waterUniformBuffer, 0, waterUniforms);
     const canvasView = context.getCurrentTexture().createView();
     if (sampleCount > 1) colorAttachment.resolveTarget = canvasView;
     else colorAttachment.view = canvasView;
@@ -212,12 +285,26 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
       if (!timestampReadbacks[index].isBusy) readback = timestampReadbacks[index];
     }
     const encoder = device.createCommandEncoder();
-    const pass = encoder.beginRenderPass(readback ? timedScenePass : scenePass);
+    const withReflection = hasReflection && drawReflection;
+    if (withReflection) {
+      device.queue.writeBuffer(reflectionUniformBuffer, 0, reflectionUniforms);
+      device.queue.writeBuffer(reflectionFadeBuffer, 0, reflectionSelector.fades);
+      const mirrorPass = encoder.beginRenderPass(readback ? timedReflectionPass : reflectionPass);
+      mirrorPass.setBindGroup(0, reflectionBindGroup);
+      mirrorPass.setVertexBuffer(0, architectureBuffer);
+      mirrorPass.setPipeline(reflectionArchitecturePipeline);
+      drawList(mirrorPass, reflectionSelector.solidDraws, reflectionSelector.solidDrawCount);
+      mirrorPass.setPipeline(reflectionSkyPipeline);
+      mirrorPass.draw(3);
+      mirrorPass.end();
+    }
+    const pass = encoder.beginRenderPass(readback ? (withReflection ? sceneEndTimedPass : timedScenePass) : scenePass);
     pass.setBindGroup(0, sceneBindGroup);
-    // the buildings first, so the depth test skips hidden pixels; the sky fills what is left
+    // the buildings first, so the depth test skips hidden pixels; the sky fills what is left; water on top
     drawVisibleArchitecture(pass);
     pass.setPipeline(skyPipeline);
     pass.draw(3);
+    drawWater(pass);
     pass.end();
     if (readback) {
       encoder.resolveQuerySet(timestampQuerySet, 0, 2, timestampResolveBuffer, 0);

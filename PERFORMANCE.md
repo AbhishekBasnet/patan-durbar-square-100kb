@@ -33,3 +33,13 @@ At full clock, Medium uses about 8 ms of the 14 ms budget. That leaves about 6 m
 - **Shadows and sky occlusion are drawn once at load:** the sun never moves.
 - **Per-preset filtering:** 3x3 shadow taps on High, 2x2 on Medium, 1 on Low. Sky-occlusion taps go 4, 3, 2.
 - **Automatic resolution scaling (`core/quality.js`):** if the GPU goes over 14 ms, the render resolution drops in steps of 8% per side, down to 70%. If that is still too slow for 5 seconds, the next visit starts one preset lower.
+
+## Step 5 (with puddles, their reflection pass, and Manga Hiti's water)
+
+| Preset | Frame avg / p99 / worst at 60 Hz | GPU avg / p99 / worst at 60 Hz |
+|---|---|---|
+| **Medium** | **16.67 / 16.80 / 16.80 ms** | **9.42 / 12.79 / 14.64 ms** |
+
+Still a steady 60 fps. Uncapped, Medium averages 117 fps (8.55 ms frame, 8.43 ms GPU).
+
+The reflection is the scene drawn upside down at far detail into a texture a third of the render size per side. It is drawn only on frames where a puddle is in view. On Low there is no reflection pass: puddles mirror the sky and a tint of the buildings.

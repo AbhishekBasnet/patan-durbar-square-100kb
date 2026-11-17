@@ -10,6 +10,7 @@ import { perspectiveReverseZ, viewFromYawPitch, multiplyMatrices, invertMatrix, 
 import { squareBounds, viewpoints } from './square/layout.js';
 import { buildSurroundings } from './square/surroundings.js';
 import { addPaving } from './square/paving.js';
+import { createPuddleField } from './square/puddles.js';
 import { buildMonuments } from './monuments/allMonuments.js';
 import { MeshBuilder } from './core/meshBuilder.js';
 import { writeLightingUniforms, computeLightMapMatrices } from './look/lighting.js';
@@ -50,7 +51,12 @@ async function start() {
   await showLoadingStep('Lighting the late afternoon…', 0.8);
   const { vertexData, chunkBounds, levelRanges } = architecture.toVertexData();
   const detailSelector = createDetailSelector({ chunkBounds, levelRanges, quality });
-  const renderer = createRenderer({ device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector });
+  const farDetailLevel = 2;
+  const reflectionSelector = createDetailSelector({ chunkBounds, levelRanges, quality, fixedLevel: farDetailLevel });
+  const puddleField = createPuddleField(quality);
+  const renderer = createRenderer({
+    device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, puddleField,
+  });
   renderer.measureGpuTime = canMeasureGpuTime; // always on: the resolution scaler reads it
   const resolutionScaler = createResolutionScaler({ quality, renderer, canMeasureGpuTime });
   addEventListener('resize', renderer.resize);
@@ -58,6 +64,9 @@ async function start() {
   // ---- per-frame state, all preallocated
   const frameUniforms = new Float32Array(frameUniformFloatCount);
   const projection = new Float32Array(16), view = new Float32Array(16), viewProjection = new Float32Array(16), inverseViewProjection = new Float32Array(16);
+  // the same camera mirrored in the water plane (y = 0), for the puddle reflection
+  const reflectionUniforms = new Float32Array(frameUniformFloatCount);
+  const mirroredViewProjection = reflectionUniforms.subarray(0, 16), mirroredEye = new Float64Array(3);
   writeLightingUniforms(frameUniforms, 36);
   frameUniforms.set(lightMapMatrices.sunShadowMatrix, sunShadowMatrixOffset);
   frameUniforms.set(lightMapMatrices.skyOcclusionMatrix, skyOcclusionMatrixOffset);
@@ -97,6 +106,20 @@ async function start() {
     frameUniforms[61] = renderer.height;
     frameUniforms[62] = 1 / renderer.width;
     frameUniforms[63] = 1 / renderer.height;
+    // mirroring y: the view-projection's y column and the inverse's y row change sign
+    reflectionUniforms.set(frameUniforms);
+    for (let index = 4; index < 8; index++) reflectionUniforms[index] = -reflectionUniforms[index];
+    for (let index = 17; index < 32; index += 4) reflectionUniforms[index] = -reflectionUniforms[index];
+    reflectionUniforms[33] = -reflectionUniforms[33];
+    mirroredEye[0] = camera.eyePosition[0]; mirroredEye[1] = -camera.eyePosition[1]; mirroredEye[2] = camera.eyePosition[2];
+  };
+
+  const isAnyPuddleVisible = () => {
+    const bounds = puddleField.puddleBounds;
+    for (let offset = 0; offset < bounds.length; offset += 4) {
+      if (detailSelector.isSphereVisible(bounds[offset], bounds[offset + 1], bounds[offset + 2], bounds[offset + 3])) return true;
+    }
+    return false;
   };
 
   const updateStats = (frameMilliseconds) => {
@@ -122,8 +145,11 @@ async function start() {
     dev?.update(secondsElapsed, frameMilliseconds);
     writeCameraUniforms();
     detailSelector.update(camera.eyePosition, viewProjection);
+    const drawReflection = isAnyPuddleVisible();
+    if (drawReflection) reflectionSelector.update(mirroredEye, mirroredViewProjection);
+    puddleField.update(elapsedSeconds, camera);
     if (!dev?.isBenchmarking()) resolutionScaler.update(frameMilliseconds);
-    renderer.render(frameUniforms);
+    renderer.render(frameUniforms, reflectionUniforms, drawReflection);
     if (statsVisible) updateStats(frameMilliseconds);
   };
 

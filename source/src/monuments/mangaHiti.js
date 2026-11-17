@@ -26,6 +26,21 @@ export const mangaHiti = {
   spoutSpacing: 2.2,
 };
 
+// The water, in the pit's own frame (puddles.js places it): a stream from each spout's pipe, the pool in the
+// trough, and the water spilled over the floor in front of it.
+export function describeMangaHitiWater() {
+  const pit = mangaHiti, floor = -pit.depth, spoutPipeReach = 0.86 * 0.75, troughTop = floor + 0.4;
+  const streams = [-1, 0, 1].map((spout) => ({
+    x: -pit.halfLength + spoutPipeReach, y: floor + pit.spoutHeightAboveFloor - 0.03, z: spout * pit.spoutSpacing,
+    drop: pit.spoutHeightAboveFloor - 0.45, outflowMetresPerSecond: 0.55,
+  }));
+  return {
+    streams,
+    trough: { x: -pit.halfLength + 0.3, y: troughTop - 0.03, z: 0, halfX: 0.27, halfZ: 2.95 },
+    spill: { x: -pit.halfLength + 2.2, y: floor + 0.012, z: 0.4, halfX: 1.5, halfZ: 2.6 },
+  };
+}
+
 export function buildMangaHiti(builder, solids, holes) {
   const pit = mangaHiti, floor = -pit.depth;
   holes.push({ minX: -pit.halfLength, maxX: pit.halfLength, minZ: -pit.halfWidth, maxZ: pit.halfWidth, floorY: floor });

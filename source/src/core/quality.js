@@ -15,6 +15,8 @@ export const qualityPresets = {
     skyOcclusionMapSize: 1024,
     shadowTapsPerAxis: 3,
     skyOcclusionTapCount: 4,
+    reflectionScale: 0.5, // puddle reflections at half the render size, per side
+    rippleEventCapacity: 32,
   },
   // the target: Intel Iris Xe (12th gen Core) and Radeon 680M at 1920x1080, 60 fps
   medium: {
@@ -25,6 +27,8 @@ export const qualityPresets = {
     skyOcclusionMapSize: 1024,
     shadowTapsPerAxis: 2,
     skyOcclusionTapCount: 3,
+    reflectionScale: 0.33,
+    rippleEventCapacity: 16,
   },
   // older integrated graphics and phones: starts below full resolution
   low: {
@@ -35,6 +39,8 @@ export const qualityPresets = {
     skyOcclusionMapSize: 512,
     shadowTapsPerAxis: 1,
     skyOcclusionTapCount: 2,
+    reflectionScale: 0, // no reflection pass: puddles mirror the sky and a tint of the buildings
+    rippleEventCapacity: 8,
   },
 };
 
