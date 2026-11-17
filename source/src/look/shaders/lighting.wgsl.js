@@ -61,7 +61,8 @@ fn shadeSurface(surface: SurfaceLook, worldPosition: vec3f, normal: vec3f, geome
   let facingSun = max(dot(normal, sunDirection), 0.0);
 
   // diffuse: sun, sky dome, and warm light thrown back up by the sunlit bricks
-  let skyDome = mix(frame.skyHorizonColor.rgb * 0.6, mix(frame.skyZenithColor.rgb, frame.skyHorizonColor.rgb, 0.35) * 1.2, normal.y * 0.5 + 0.5);
+  // shade is lit by the blue sky overhead: cooler than the sunlit faces, as at a real golden hour
+  let skyDome = mix(frame.skyHorizonColor.rgb * 0.5, mix(frame.skyZenithColor.rgb, frame.skyHorizonColor.rgb, 0.15) * 1.25, normal.y * 0.5 + 0.5);
   let bounce = frame.groundBounceColor.rgb * (0.6 - 0.4 * normal.y);
   let diffuseLight = frame.sunColor.rgb * facingSun * sunVisible + (skyDome + bounce) * skyVisible;
   let diffuse = surface.albedo * (1.0 - surface.metalness) * diffuseLight;

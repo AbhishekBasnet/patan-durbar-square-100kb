@@ -14,7 +14,7 @@ import { addMakaraSpout } from '../architecture/statues.js';
 const palaceStoreyHeights = [3.3, 2.4, 3.0, 2.2];
 const palaceWing = {
   storeyHeights: palaceStoreyHeights, wallMaterial: material.brick, variant: 140, groundFloor: 'blank',
-  windowRowStorey: 2, roofOverhang: 1.3, roofHeight: 2.0, carvedStruts: true, facadeBayMetres: 6, maximumWindowBays: 4,
+  windowRowStorey: 2, roofOverhang: 1.6, roofHeight: 3.4, carvedStruts: true, facadeBayMetres: 6, maximumWindowBays: 4,
 };
 const goldenGate = { width: 1.5, height: 2.4, windowWidth: 1.4, windowHeight: 1.5 };
 const sundariChowk = { courtyardHalfSize: 8, gateWidth: 2.4, gateHeight: 3.0 };

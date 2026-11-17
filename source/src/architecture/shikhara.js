@@ -31,7 +31,8 @@ function steppedPolygonRadius(angle, sideCount, projection) {
 export function addShikharaTower(builder, { y, halfWidth, height, withAmalaka = true, sideCount = 4 }) {
   const profile = [];
   for (let band = 0; band < towerBandCount; band++) {
-    for (const [share, ledge] of [[0, 1.04], [0.12, 1.0], [1, 1.0]]) {
+    // each storey (bhumi) starts with a projecting ledge and a small ribbed ring, as on the real towers
+    for (const [share, ledge] of [[0, 1.09], [0.07, 1.09], [0.1, 1.0], [0.55, 0.985], [1, 1.0]]) {
       const t = (band + share * 0.999) / towerBandCount;
       profile.push([halfWidth * (1 - towerTaper * Math.pow(t, towerCurve)) * ledge, t * height]);
     }

@@ -24,7 +24,7 @@ export const qualityPresets = {
     name: 'medium',
     antialiasingSamples: 4,
     maximumRenderPixels: 1920 * 1080,
-    shadowMapSize: 2048,
+    shadowMapSize: 4096, // drawn once at load, so a sharper map costs memory, not frame time
     skyOcclusionMapSize: 1024,
     shadowTapsPerAxis: 3,
     skyOcclusionTapCount: 4,

@@ -31,7 +31,7 @@ export const monumentLayout = [
 
   // the royal palace along the east side; its west front runs along x = 16
   { name: 'keshavNarayanChowk', x: 31, z: -47, facingDegrees: 270, width: 30, depth: 30, height: 12 },
-  { name: 'mulChowk', x: 31, z: -18, facingDegrees: 270, width: 24, depth: 30, height: 12 },
+  { name: 'mulChowk', x: 31, z: -18, facingDegrees: 270, width: 28, depth: 30, height: 12 },
   { name: 'sundariChowk', x: 31, z: 11, facingDegrees: 270, width: 30, depth: 30, height: 11 },
   { name: 'degutaleTemple', x: 26, z: -32, facingDegrees: 270, width: 8, depth: 8, height: 30 },
   { name: 'talejuOctagonalTower', x: 19.5, z: -28, facingDegrees: 270, width: 6, depth: 6, height: 25 },
