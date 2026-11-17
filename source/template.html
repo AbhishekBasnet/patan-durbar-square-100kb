@@ -63,6 +63,20 @@ kbd { justify-self: end; padding: .15em .45em; border-radius: .3em; background: 
 #menu-button { position: absolute; top: .6em; right: .6em; display: none; padding: .3em .6em; font-size: 1.3em; opacity: .75; }
 .walking #menu-button { display: block; }
 @media (pointer: fine) { .walking #menu-button { display: none; } }
+/* the on-screen controller for touch screens: a joystick bottom left, buttons on the right */
+#touch-controls { display: none; }
+@media (pointer: coarse) { .walking #touch-controls { display: block; } }
+#joystick {
+  position: absolute; left: 1.4em; bottom: 1.4em; width: 7.5em; height: 7.5em; border-radius: 50%;
+  background: #1a0d0766; box-shadow: inset 0 0 0 2px #fff3e266; touch-action: none;
+}
+#joystick-knob {
+  position: absolute; left: 50%; top: 50%; width: 3.2em; height: 3.2em; margin: -1.6em 0 0 -1.6em; border-radius: 50%;
+  background: #fff3e2cc; box-shadow: 0 .2em .6em #0008; pointer-events: none;
+}
+#touch-buttons { position: absolute; right: 1.2em; bottom: 1.2em; display: grid; grid-template-columns: auto auto; gap: .6em; }
+#touch-buttons button { padding: .7em .9em; font-size: .85em; background: #1a0d07b3; color: var(--ink); box-shadow: inset 0 0 0 2px #fff3e266; touch-action: none; }
+#touch-buttons button.on { background: var(--gold); color: var(--deep); }
 #stats { position: absolute; top: 1em; left: 1.2em; margin: 0; font: .8em/1.6 ui-monospace, Consolas, monospace; white-space: pre-wrap; text-shadow: 0 1px 4px #000; pointer-events: none; }
 </style>
 </head>
@@ -82,11 +96,19 @@ kbd { justify-self: end; padding: .15em .45em; border-radius: .3em; background: 
         <kbd>V</kbd>Film look <kbd>M</kbd>Sound
         <kbd>H</kbd>Stats
       </p>
-      <p id=touch-hint class=plate>Hold a finger down to walk · slide to look around · a second finger walks faster</p>
+      <p id=touch-hint class=plate>Joystick to walk · drag anywhere to look · buttons to hop, walk faster, change view, film look and sound</p>
     </div>
   </div>
 </div>
 <button id=menu-button aria-label=Menu>≡</button>
+<div id=touch-controls>
+  <div id=joystick><i id=joystick-knob></i></div>
+  <p id=touch-buttons>
+    <button id=touch-view>View</button><button id=touch-hop>Hop</button>
+    <button id=touch-film>Film</button><button id=touch-fast>Fast</button>
+    <button id=touch-sound>Sound</button>
+  </p>
+</div>
 <pre id=stats></pre>
 <script>
 /*SCRIPT*/

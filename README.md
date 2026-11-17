@@ -20,7 +20,7 @@ Open `index.html` in Chrome or Edge (it needs WebGPU), wait for the loading bar 
 | `V` | Film look on / off |
 | `M` | Sound on / off |
 
-On a touchscreen, hold one finger down to walk and slide it to look around. A second finger walks faster.
+On a touchscreen an on-screen controller appears: the joystick at the bottom left walks (push it part way to stroll), and dragging anywhere else looks around. The buttons are **Hop**, **Fast** (toggles 30% faster), **View** (next viewpoint), **Film** (film look) and **Sound**. The ≡ button opens the menu.
 
 ## Building
 
@@ -36,7 +36,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **92.2 KB** minified, 34.8 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **94.2 KB** minified, 35.3 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -52,7 +52,7 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/core/meshBuilder.js` | Geometry helpers: transform stack, boxes, prisms, lathes, tubes, vertex packing |
 | `src/core/renderer.js` | WebGPU device, render targets, pipelines, frame drawing, GPU timing |
 | `src/core/camera.js` | Walking camera: eye height, head bob, hop, collision with steps and walls |
-| `src/core/input.js` | Keyboard, mouse and touch |
+| `src/core/input.js` | Keyboard, mouse, and the on-screen touch controller (joystick, look drag, buttons) |
 | `src/core/quality.js` | High / Medium / Low presets, the first-visit pick, automatic resolution scaling |
 | `src/core/lod.js` | Distance levels of detail per chunk, view culling, dithered cross-fades |
 | `src/architecture/plinths.js` | Stepped plinths with front stairs, and guardians placed beside them |

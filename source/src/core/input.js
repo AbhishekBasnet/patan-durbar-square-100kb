@@ -1,18 +1,18 @@
 // Keyboard, mouse and touch input, collected into one plain state object that camera.js reads each frame.
-// One-shot keys (stats, sound, film look, menu, viewpoints) call the matching function in `actions`.
+// One-shot keys (stats, sound, film look, menu, viewpoints) call the matching function in `actions`; on touch
+// screens an on-screen joystick and buttons do the same.
 // Depends on nothing; the page shell (template.html) turns phones held upright into landscape.
 
 const mouseLookRadiansPerPixel = 0.0022;
 const touchLookRadiansPerPixel = 0.0035;
-const touchJoystickTurnSpeed = 1.5; // radians per second at full finger offset
-const touchJoystickReachFraction = 0.25; // finger offset (share of the short screen side) for full turn speed
+const joystickKnobTravel = 60; // how far the knob follows the finger, in percent of its own size
 
 export function createInput(canvas, actions) {
   const state = {
     forward: 0, backward: 0, left: 0, right: 0, fast: 0,
     jumpRequested: false,
     lookYaw: 0, lookPitch: 0, // radians of turn waiting to be applied
-    touchWalking: false,
+    touchForward: 0, touchSide: 0, // the on-screen joystick, -1..1
     enabled: false, // false while the menu is open
   };
   const pageIsTurned = matchMedia('(orientation:portrait) and (pointer:coarse)');
@@ -44,8 +44,7 @@ export function createInput(canvas, actions) {
 
   const releaseEverything = () => {
     state.forward = state.backward = state.left = state.right = state.fast = 0;
-    state.touchWalking = false;
-    touchId = -1;
+    state.touchForward = state.touchSide = 0;
   };
   addEventListener('blur', releaseEverything);
 
@@ -62,46 +61,68 @@ export function createInput(canvas, actions) {
     state.lookPitch -= event.movementY * mouseLookRadiansPerPixel;
   });
 
-  // touch: one finger walks forward and steers (the view follows the finger, and holding it away from
-  // where it went down keeps turning like a joystick); a second finger walks faster
-  let touchId = -1, touchStartX = 0, touchStartY = 0, touchX = 0, touchY = 0;
-  const onTouch = (event) => {
+  // touch screens get an on-screen controller (template.html): a joystick bottom left to walk, a drag anywhere
+  // else to look around, and buttons for hop, fast, next viewpoint, film look and sound
+  const turnedPoint = (touch) => pageIsTurned.matches ? [touch.clientY, -touch.clientX] : [touch.clientX, touch.clientY];
+  let lookTouchId = -1, lookX = 0, lookY = 0;
+  const onLookTouch = (event) => {
     event.preventDefault();
     actions.onAnyInput();
     if (!state.enabled) return;
-    let finger = null, isNewFinger = false;
-    for (const touch of event.touches) if (touch.identifier === touchId) finger = touch;
-    if (!finger && event.touches.length) {
-      finger = event.touches[0];
-      touchId = finger.identifier;
-      isNewFinger = true;
+    let finger = null;
+    for (const touch of event.changedTouches) if (lookTouchId < 0 || touch.identifier === lookTouchId) finger = touch;
+    if (!finger) return;
+    const [x, y] = turnedPoint(finger);
+    if (event.type === 'touchstart') {
+      lookTouchId = finger.identifier;
+    } else if (event.type === 'touchmove') {
+      state.lookYaw += (x - lookX) * touchLookRadiansPerPixel;
+      state.lookPitch -= (y - lookY) * touchLookRadiansPerPixel;
+    } else {
+      lookTouchId = -1;
     }
-    state.touchWalking = !!finger;
-    state.fast = event.touches.length > 1 ? 1 : 0;
-    if (!finger) { touchId = -1; return; }
-    // the touch axes turn with the page when it lies on its side
-    const x = pageIsTurned.matches ? finger.clientY : finger.clientX;
-    const y = pageIsTurned.matches ? -finger.clientX : finger.clientY;
-    if (isNewFinger) { touchStartX = x; touchStartY = y; }
-    else {
-      state.lookYaw += (x - touchX) * touchLookRadiansPerPixel;
-      state.lookPitch -= (y - touchY) * touchLookRadiansPerPixel;
-    }
-    touchX = x; touchY = y;
+    lookX = x; lookY = y;
   };
-  for (const name of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
-    canvas.addEventListener(name, onTouch, { passive: false });
-  }
+  for (const name of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) canvas.addEventListener(name, onLookTouch, { passive: false });
 
-  // called every frame: the joystick part of touch steering
-  state.applyTouchJoystick = (secondsElapsed) => {
-    if (touchId < 0) return;
-    const reachPixels = Math.min(innerWidth, innerHeight) * touchJoystickReachFraction;
-    const offsetX = Math.max(-1, Math.min(1, (touchX - touchStartX) / reachPixels));
-    const offsetY = Math.max(-1, Math.min(1, (touchY - touchStartY) / reachPixels));
-    state.lookYaw += offsetX * touchJoystickTurnSpeed * secondsElapsed;
-    state.lookPitch -= offsetY * touchJoystickTurnSpeed * 0.5 * secondsElapsed;
+  const joystick = document.getElementById('joystick'), knob = document.getElementById('joystick-knob');
+  let joystickTouchId = -1;
+  const onJoystickTouch = (event) => {
+    event.preventDefault();
+    actions.onAnyInput();
+    for (const touch of event.changedTouches) {
+      if (event.type === 'touchstart' && joystickTouchId < 0) joystickTouchId = touch.identifier;
+      if (touch.identifier !== joystickTouchId) continue;
+      if (event.type === 'touchend' || event.type === 'touchcancel') {
+        joystickTouchId = -1;
+        state.touchForward = state.touchSide = 0;
+        knob.style.transform = '';
+        continue;
+      }
+      // the knob's offset from the joystick's centre, as a share of its reach, is the walking direction
+      const bounds = joystick.getBoundingClientRect(), reach = Math.min(bounds.width, bounds.height) / 2;
+      const [x, y] = turnedPoint(touch);
+      const [centreX, centreY] = turnedPoint({ clientX: bounds.left + bounds.width / 2, clientY: bounds.top + bounds.height / 2 });
+      let offsetX = (x - centreX) / reach, offsetY = (y - centreY) / reach;
+      const length = Math.hypot(offsetX, offsetY);
+      if (length > 1) { offsetX /= length; offsetY /= length; }
+      state.touchSide = offsetX;
+      state.touchForward = -offsetY;
+      knob.style.transform = `translate(${offsetX * joystickKnobTravel}%, ${offsetY * joystickKnobTravel}%)`;
+    }
   };
+  for (const name of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) joystick.addEventListener(name, onJoystickTouch, { passive: false });
+
+  const onButton = (id, press) => document.getElementById(id).addEventListener('touchstart', (event) => {
+    event.preventDefault();
+    actions.onAnyInput();
+    if (state.enabled) press(event.currentTarget);
+  }, { passive: false });
+  onButton('touch-hop', () => { state.jumpRequested = true; });
+  onButton('touch-fast', (button) => { state.fast = state.fast ? 0 : 1; button.classList.toggle('on', !!state.fast); });
+  onButton('touch-view', () => actions.nextViewpoint());
+  onButton('touch-film', () => actions.toggleFilmLook());
+  onButton('touch-sound', () => actions.toggleSound());
 
   state.capturePointer = capturePointer;
   state.releaseEverything = releaseEverything;

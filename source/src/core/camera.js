@@ -143,13 +143,14 @@ export function createWalkingCamera(colliders, bounds, groundHoles) {
 
     // walking direction on the ground from the keys (or a finger on the screen), relative to where you look
     const forwardX = Math.sin(camera.yaw), forwardZ = -Math.cos(camera.yaw);
-    const forwardAmount = input.forward - input.backward + (input.touchWalking ? 1 : 0);
-    const sideAmount = input.right - input.left;
+    const forwardAmount = input.forward - input.backward + input.touchForward;
+    const sideAmount = input.right - input.left + input.touchSide;
     let wishX = forwardX * forwardAmount - forwardZ * sideAmount;
     let wishZ = forwardZ * forwardAmount + forwardX * sideAmount;
     const wishLength = Math.hypot(wishX, wishZ);
     const speed = input.fast ? fastWalkingSpeedMetresPerSecond : walkingSpeedMetresPerSecond;
-    if (wishLength > 1e-6) { wishX *= speed / wishLength; wishZ *= speed / wishLength; }
+    // full speed for keys; the joystick walks slower when pushed only part way
+    if (wishLength > 1e-6) { const scale = speed * Math.min(1, wishLength) / wishLength; wishX *= scale; wishZ *= scale; }
     const follow = 1 - Math.exp(-secondsElapsed * accelerationRate);
     camera.velocityX += (wishX - camera.velocityX) * follow;
     camera.velocityZ += (wishZ - camera.velocityZ) * follow;

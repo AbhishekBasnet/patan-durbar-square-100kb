@@ -76,7 +76,9 @@ async function start() {
   let statsVisible = false, statsTimer = 0, statsFrames = 0, statsWorstMilliseconds = 0;
   let menuOpen = true;
 
+  let currentViewpoint = 0;
   const jumpToViewpoint = (index) => {
+    currentViewpoint = index;
     const viewpoint = viewpoints[index];
     camera.standAt(viewpoint.x, viewpoint.z, viewpoint.yawDegrees, viewpoint.pitchDegrees);
   };
@@ -91,6 +93,7 @@ async function start() {
     toggleFilmLook: () => { renderer.filmLook = !renderer.filmLook; },
     openMenu: () => setMenuOpen(true),
     jumpToViewpoint,
+    nextViewpoint: () => { currentViewpoint = (currentViewpoint + 1) % viewpoints.length; jumpToViewpoint(currentViewpoint); },
   });
 
   const writeCameraUniforms = () => {
@@ -157,7 +160,6 @@ async function start() {
     lastTimestamp = timestamp;
     const secondsElapsed = Math.min(frameMilliseconds / 1000, longestFrameSeconds);
     elapsedSeconds += secondsElapsed;
-    input.applyTouchJoystick(secondsElapsed);
     if (!dev?.isFlying()) camera.update(menuOpen ? 0 : secondsElapsed, input);
     dev?.update(secondsElapsed, frameMilliseconds);
     writeCameraUniforms();
