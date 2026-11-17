@@ -112,8 +112,12 @@ struct ArchitectureVaryings {
       surface.albedo = tiles.albedo;
       surface.occlusion *= tiles.cavity;
     }
-    case ${material.plaster}u: {
+    case ${material.plaster}u, ${material.redClay}u: {
       surface.albedo = patchedPlaster(coordinates, baseColor, weathering);
+    }
+    case ${material.earth}u: {
+      // swept earth: soft patches of damp and dry, and the scuffs of feet
+      surface.albedo = baseColor * mix(0.82, 1.12, fractalNoise2D(input.worldPosition.xz * 1.3));
     }
     default: {}
   }

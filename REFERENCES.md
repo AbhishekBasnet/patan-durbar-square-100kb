@@ -63,7 +63,7 @@ The palace wings use the same generator as the houses: storeys with glazed bands
 
 | Item | Based on | Notes |
 |---|---|---|
-| Houses around the square | 1969–77 photos | Three- and four-storey brick houses, some plastered. Shops with wooden shutters on the ground floor, latticed windows and a window row above, tile roofs on plain struts. Alleys end in more houses. Heights, widths and the shop/doorway mix are random within period-typical ranges **(plausible)**. |
+| Houses around the square | The user's request; rural and old-town Nepali mud houses | Old mud houses beyond an invisible wall at the square's edge, chosen by the user instead of the brick houses that stood there. Each has limewashed walls over a red clay (rato mato) band, a pidhi under a lean-to roof on posts, and an aangan yard between low mud walls, some with a tulsi pedestal. A second row behind closes the view. Sizes and details are **(plausible)**. |
 | Paving | Period photos | Brick paving. Real patterns and stone paths come in step 2. |
 
 ## Water

@@ -35,7 +35,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **83.6 KB** minified, 31.4 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **85.0 KB** minified, 31.9 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -56,7 +56,8 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/core/lod.js` | Distance levels of detail per chunk, view culling, dithered cross-fades |
 | `src/architecture/plinths.js` | Stepped plinths with front stairs, and guardians placed beside them |
 | `src/architecture/statues.js` | Lions, elephants, Garuda, King Yoganarendra under the cobra hood, makara spouts |
-| `src/architecture/newarBuilding.js` | An ordinary Newar building: palace wings and every house |
+| `src/architecture/newarBuilding.js` | An ordinary Newar building: the palace wings |
+| `src/architecture/mudHouse.js` | An old mud house: red clay and limewash, pidhi, aangan, tulsi pedestal |
 | `src/architecture/brickWall.js` | Brick cores with glazed base bands and stepped cornices |
 | `src/architecture/doorways.js` | Carved nested door frames, closed doors, toranas |
 | `src/architecture/windows.js` | Latticed windows and window rows |
@@ -70,7 +71,7 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/square/water.js` | The puddle and Manga Hiti's pool and streams; the ripple event pool fed by the streams and footsteps |
 | `src/square/layout.js` | The map: every monument's position, facing and size, and the 6 viewpoints |
 | `src/square/blocks.js` | Solid blocks for collision, placed relative to a monument |
-| `src/square/surroundings.js` | The houses around the square, with alleys |
+| `src/square/surroundings.js` | Two rows of mud houses beyond the square's invisible wall |
 | `src/look/lighting.js` | The golden-hour sun, sky and haze; the shadow and sky occlusion map matrices |
 | `src/look/materials.js` | Named materials: colour, roughness, metalness, weathering |
 | `src/look/shaders/frameUniforms.wgsl.js` | Per-frame uniforms, haze, tone mapping |

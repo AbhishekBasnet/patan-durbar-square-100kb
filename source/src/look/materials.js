@@ -16,6 +16,9 @@ export const material = {
   bronze: 9, // bells and old brass, darker than gilding
   redCloth: 10, // faded red and ochre paint, offering cloth
   carvedStone: 11, // statues and carved stone: like stone, without the block joints
+  redClay: 12, // the red clay (rato mato) plastered on the lower walls and pidhi of mud houses
+  earth: 13, // the swept earth of a house's aangan
+  greenery: 14, // the tulsi plant on its pedestal
 };
 
 // Each row: base colour (linear red, green, blue), roughness, metalness, weathering (dirt, moss and wear).
@@ -32,4 +35,7 @@ export const materialTable = [
   [0.45, 0.30, 0.13, 0.45, 1, 0.6], // bronze
   [0.45, 0.10, 0.05, 0.9, 0, 0.5], // red cloth and paint
   [0.2, 0.185, 0.16, 0.8, 0, 0.9], // carved stone
+  [0.42, 0.15, 0.085, 0.95, 0, 0.7], // red clay
+  [0.34, 0.23, 0.14, 0.95, 0, 0.6], // swept earth
+  [0.12, 0.24, 0.07, 0.8, 0, 0.3], // tulsi leaves
 ];
