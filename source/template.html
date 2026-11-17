@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Patan Durbar Square, 1985</title>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<meta name=theme-color content=#2a160c>
+<style>
+/* The class on <body> is the state of the page: loading, menu, walking, or "loading failed". */
+:root { --ink: #fff3e2; --gold: #f2b766; --deep: #2a160c; --plate: #1a0d07c0; }
+html { background: var(--deep); }
+body {
+  position: fixed; inset: 0; margin: 0; overflow: hidden;
+  background: radial-gradient(#6b3a1c, var(--deep) 70%);
+  font: 600 clamp(13px, .7vw + .9vh, 34px)/1.4 Georgia, 'Times New Roman', serif; color: var(--ink);
+  -webkit-user-select: none; user-select: none;
+}
+/* a phone held upright gets the whole page turned on its side, so the scene is always landscape */
+@media (orientation: portrait) and (pointer: coarse) {
+  body { width: 100dvh; height: 100dvw; transform-origin: 0 0; transform: rotate(90deg) translateY(-100%); }
+}
+
+/* the scene: blurred and dimmed behind the menu, in focus while walking */
+canvas { position: absolute; width: 100%; height: 100%; touch-action: none; transition: filter .8s, opacity 1.5s; }
+body:not(.walking) canvas { filter: blur(.8vmax) brightness(.55) sepia(.3); }
+.loading canvas { opacity: 0; }
+
+#menu {
+  position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 1.6em;
+  padding: 1em; text-align: center; transition: opacity .4s, visibility .4s;
+}
+.walking #menu, .menu #loading, .loading #choices { opacity: 0; visibility: hidden; }
+h1 { margin: 0; font: 400 3.6em/1 Georgia, serif; letter-spacing: .04em; color: var(--gold); text-shadow: 0 .05em .3em #000a; }
+h1 small { display: block; margin-top: .35em; font-size: .3em; letter-spacing: .4em; text-transform: uppercase; color: var(--ink); }
+p { margin: 0; }
+#stack { display: grid; width: 26em; max-width: 100%; }
+#stack > * { grid-area: 1/1; transition: opacity .6s, visibility .6s; }
+#choices { display: grid; gap: 1.1em; }
+
+#loading-track { height: .4em; margin: .4em 0 1em; overflow: hidden; border-radius: 1em; background: #0006; box-shadow: 0 0 0 1px #f2b76680; }
+#loading-bar { display: block; height: 100%; background: linear-gradient(90deg, #c46a2c, var(--gold)); transform: scaleX(0); transform-origin: 0; transition: transform .6s; }
+.failed #loading-track { visibility: hidden; }
+
+button {
+  padding: .75em 1.4em; border: 0; border-radius: .4em; background: var(--ink); color: var(--deep);
+  font: 700 1em/1.2 Georgia, serif; letter-spacing: .08em; cursor: pointer; box-shadow: 0 .3em 1em #0008;
+}
+button:hover { filter: brightness(1.1); }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+#enter { padding: .9em; font-size: 1.3em; background: linear-gradient(#f7cf8c, #d88a3e); }
+
+.plate { padding: .9em 1.4em; border-radius: .6em; background: var(--plate); font-size: .85em; }
+#quality { display: flex; align-items: center; gap: .4em; padding: .4em; }
+#quality span { flex: 1; color: var(--gold); }
+#quality button { flex: 1.2; padding: .6em 0; background: none; box-shadow: none; color: var(--ink); }
+#quality .chosen { background: var(--gold); color: var(--deep); pointer-events: none; }
+
+#controls { display: grid; grid-template-columns: auto auto auto auto; gap: .45em .8em; align-items: center; text-align: left; }
+kbd { justify-self: end; padding: .15em .45em; border-radius: .3em; background: var(--ink); color: var(--deep); font: 700 .9em system-ui, sans-serif; }
+#touch-hint { display: none; }
+@media (pointer: coarse) { #controls { display: none; } #touch-hint { display: block; } }
+
+#menu-button { position: absolute; top: .6em; right: .6em; display: none; padding: .3em .6em; font-size: 1.3em; opacity: .75; }
+.walking #menu-button { display: block; }
+@media (pointer: fine) { .walking #menu-button { display: none; } }
+#stats { position: absolute; top: 1em; left: 1.2em; margin: 0; font: .8em/1.6 ui-monospace, Consolas, monospace; white-space: pre-wrap; text-shadow: 0 1px 4px #000; pointer-events: none; }
+</style>
+</head>
+<body class=loading>
+<canvas id=scene></canvas>
+<div id=menu>
+  <h1>Patan Durbar Square<small>An afternoon in 1985</small></h1>
+  <div id=stack>
+    <div id=loading><div id=loading-track><i id=loading-bar></i></div><p id=loading-message>Starting…</p></div>
+    <div id=choices>
+      <button id=enter>Enter the square</button>
+      <p id=quality class=plate><span>Detail</span><button>Low</button><button>Medium</button><button>High</button></p>
+      <p id=controls class=plate>
+        <kbd>WASD</kbd>Walk <kbd>Shift</kbd>Walk faster
+        <kbd>Mouse</kbd>Look <kbd>Space</kbd>Hop
+        <kbd>1–6</kbd>Viewpoints <kbd>Esc</kbd>Menu
+        <kbd>V</kbd>Film look <kbd>M</kbd>Sound
+        <kbd>H</kbd>Stats
+      </p>
+      <p id=touch-hint class=plate>Hold a finger down to walk · slide to look around · a second finger walks faster</p>
+    </div>
+  </div>
+</div>
+<button id=menu-button aria-label=Menu>≡</button>
+<pre id=stats></pre>
+<script>
+/*SCRIPT*/
+</script>
+</body>
+</html>

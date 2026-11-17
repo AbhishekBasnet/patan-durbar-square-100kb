@@ -1,0 +1,189 @@
+Build a real-time, walkable recreation of Patan Durbar Square (Lalitpur, Nepal) as it was in the mid-1980s, running in the browser. It must look stunning up close and from a distance, feel like an ordinary lived-in afternoon of that era, and let me walk through it on foot.
+
+STARTING POINT
+- /mnt/Projects/Backend/abyssal-garden-main holds Abyssal Garden, an earlier project made the same way: a procedural WebGPU world bundled into one HTML file. Read its README.md and source/ first and reuse what fits: the build pipeline (source/build.mjs), the WebGPU renderer setup, the detail levels and auto resolution scaling (quality.js), the touch controls, the synthesized audio, the dev build with a scripted fly-through and benchmark (dev.js). Its code uses short cryptic names; do not copy that style, rename everything you reuse to follow CODE QUALITY below.
+- Never modify or delete anything in /mnt/Projects/Backend/abyssal-garden-main. Only read from it.
+
+PROJECT FOLDER AND GIT
+- Create a new folder /mnt/Projects/Backend/patan-durbar/ and put everything for this project there: index.html, source/, README.md, REFERENCES.md, LICENSE, and a copy of this prompt as prompt.txt.
+- Run git init in it as the very first step, with a .gitignore for node_modules/, dev.html and any render or benchmark output.
+- Commit in stages: at least one commit at the end of every WORK ORDER step below, and smaller commits inside a step whenever a piece works on its own (for example "Add pagoda roof generator"). Never commit a broken build: run npm run build before every commit.
+- Commit messages: a short summary line saying what changed, then a few lines on why if it is not obvious. The current minified size goes in the message of every step commit.
+- Do not push anywhere; there is no remote.
+
+WORK ORDER
+At the end of every step: build, commit, then stop and tell me to open /mnt/Projects/Backend/patan-durbar/index.html in Chrome to check it, with a short list of what to look at. Wait for my feedback before starting the next step.
+1. References gathered, REFERENCES.md written, and layout.js with every monument's footprint as plain blocks at the right positions and heights. Walk around the blocked-out square.
+2. Golden-hour lighting, paving and the reusable architecture parts, proven on one pagoda temple and Krishna Mandir.
+3. All monuments, the palace and the surrounding houses.
+4. Detail levels and the performance target on Medium.
+5. Puddles and Manga Hiti water.
+6. People, vendors, animals, vehicles and sound.
+7. Film look, polish, and all four verification gates.
+
+ERA: MID-1980s NEPAL
+- The square before the 2015 earthquake and before the big restorations: every temple standing in its original form, but weathered. Darkened wood, faded and cracked brick, moss and grass on roof tiles, patched plaster, worn stone steps.
+- The square is a working public space, not a museum: a small market, a meeting place, a playground and a place of worship all at once.
+- An ordinary day. No festival, no procession, no chariot, no special decorations.
+- Nothing from after about 1988 may appear: no mobile phones, no plastic banners or flex signs, no modern cars, no satellite dishes, no LED lights.
+
+PRIORITIES (in this order when they conflict)
+1. Visual quality and architectural faithfulness
+2. Readable, well-named, well-separated source code
+3. Small bundle size
+4. Stable frame pacing on integrated graphics at 1080p (see TARGET)
+Readable code and small size do not conflict: the build shortens all names (see CODE QUALITY), so long names cost no bytes. Size is won by generating detail from code, not by cutting readability.
+
+CONSTRAINTS
+- No Three.js/Babylon.js or other engines. WebGPU rendered.
+- Everything procedural: no texture, model or sound files. Every carving, brick, roof, statue and person is built from code.
+- Deliverable is a single self-contained index.html built from a readable source folder.
+- Size budget: hard limit 150 KB minified. Going under is welcome, but never by making the monuments less faithful. Report minified and gzipped size after every build, plus a per-file breakdown of the biggest contributors.
+- How to stay small:
+  - Build everything from a few reusable, parameterized parts (one pagoda roof generator for every pagoda temple, one strut carver for every strut, one person generator for every person). A monument file is mostly parameters, not geometry.
+  - Generate geometry, carvings and people on the GPU or at load time from noise and math; instance everything that repeats (bricks, tiles, struts, pigeons, people, goods).
+  - Store the layout of the square as one compact table of positions, rotations and sizes.
+  - Synthesize all sound; no sample data.
+  - No dead code, no duplicate helpers, no large hand-typed data arrays.
+- Zero per-frame JS allocations (no GC stutter). Preallocate all buffers.
+- Before building, gather reference material for the square in the 1970s-80s: old travel and archive photos, period postcards, film footage, architectural surveys. Use modern photos only for carving and structural detail, never for the state of buildings or street life. Keep a short REFERENCES.md listing what each monument, person type and prop is based on. Do not invent monuments; where a detail is unknown, choose something plausible for 1980s Newar Patan and mark it in REFERENCES.md. Some buildings changed use or condition over time (for example the palace wing that later became the Patan Museum); show them as they were in the 1980s.
+
+CODE QUALITY (as important as the visuals)
+- Names say what things are. No one- or two-letter names except loop counters (i, j) and math conventions (x, y, z, t, uv).
+  Good: createPagodaRoof, carveRoofStrut, brickWallHeight, krishnaMandirShikharaTiers, valueNoise3D, smoothStep
+  Bad: mkRf, cs, h31, vn, ss, W, T
+- Shader (WGSL) code follows the same rule. The minifier already shortens JS names; the build step must also shorten WGSL identifiers (functions, variables, struct fields that are not bound from JS), so readable source costs nothing in the final file. Readable source, tiny output.
+- No magic numbers in the open: dimensions, colors and timings are named constants grouped at the top of the file that uses them, with units in the name or a comment (roofOverhangMeters, goldenHourSunColor).
+- One file per concern, small enough to read in one sitting (aim for under 400 lines):
+  source/
+    build.mjs                     bundles to ../index.html, minifies JS, minifies and renames WGSL, reports sizes
+    template.html                 page shell: loading bar, start menu, controls help
+    src/
+      core/
+        math.js                   vectors, matrices, random, noise
+        meshBuilder.js            geometry helpers: extrude, lathe, sweep, instancing
+        renderer.js               WebGPU device, passes, frame loop
+        camera.js                 walking camera: eye height, head bob, collision with ground, steps and walls
+        input.js                  keyboard, mouse, touch
+        quality.js                High / Medium / Low presets, first-visit pick, auto resolution scaling
+        lod.js                    distance levels of detail (High / Medium / Low) and smooth transitions
+      architecture/               reusable Newar building parts
+        brickWall.js              brick bonds, glazed "dachi apa" bricks, mortar lines
+        pagodaRoof.js             tiered tile roofs, gilded finials (gajur), hanging bells, metal banners (pataka)
+        roofStruts.js             carved diagonal struts (tunala) with deity figures
+        windows.js                latticed windows, carved frames, ankhi jhyal
+        doorways.js               carved doorways and torana arches above them (closed or dark inside; no interiors)
+        plinths.js                stepped stone plinths and stairs with guardian statues
+        shikhara.js               stone shikhara towers and pavilion tiers
+      monuments/                  one file per real monument, built from the parts above
+        krishnaMandir.js
+        bhimsenTemple.js
+        vishwanathTemple.js
+        charNarayanTemple.js
+        hariShankarTemple.js
+        octagonalKrishnaTemple.js (Chyasim Deval)
+        kingYoganarendraPillar.js
+        garudaPillar.js
+        talejuBell.js
+        royalPalace.js            facade, and the open-air courtyards Mul Chowk, Sundari Chowk with Tusha Hiti, Keshav Narayan Chowk with the golden gate
+        degutaleTemple.js
+        mangaHiti.js              sunken stone water spout with makara-head spouts, and the Mani Mandap pavilions
+      square/
+        layout.js                 the compact table of every monument's position, rotation and size: the single map of the square
+        paving.js                 stone and brick paving, drains, worn paths
+        surroundings.js           ordinary Newar houses, shops and alleys that frame the square
+        powerLines.js             wooden and concrete poles with sagging, tangled wires
+        puddles.js                where puddles lie (low spots in the worn paving), and the ripple sources: drips, wind, footsteps
+      life/                       the 1980s street life
+        people.js                 people types and their routines (walking, sitting, selling, playing)
+        clothing.js               daura-suruwal, dhaka topi, saris, haku patasi, shawls, trekker clothes
+        vendors.js                vendor spots and goods laid out on the ground
+        vehicles.js               bicycles, rickshaws, a tempo, the occasional old car or motorbike
+        animals.js                pigeons, street dogs, a cow, goats, chickens
+        shrineOfferings.js        flowers, rice, red tika powder, butter lamps, incense smoke
+      look/
+        shaders/                  one WGSL file per material or effect: brick.wgsl.js, wood.wgsl.js, stone.wgsl.js,
+                                  gold.wgsl.js, water.wgsl.js, sky.wgsl.js, atmosphere.wgsl.js, postProcess.wgsl.js
+                                  (water.wgsl.js is shared by the puddles and Manga Hiti's spouts and basin)
+        lighting.js               golden-hour sun, sky light, shadows
+        materials.js              named material constants: colors, roughness, wear
+      audio/
+        soundscape.js             the mix: layers the sounds below by where you stand
+        streetSounds.js           vendor calls, chatter, bicycle bells, a passing tempo, pigeons, footsteps
+        templeSounds.js           temple bells, the Taleju bell, devotional singing (bhajan)
+        radio.js                  a crackly transistor radio from a shop, synthesized period-style music
+- Each file opens with a 2-3 line comment saying what it builds and which files it depends on.
+- README with a table of files, the size budget and current size, and "easy first tweaks" (sun angle, sun color, walking speed, crowd size, number of vendors, film look strength).
+
+SCENE
+- The full square end to end, with the royal palace along the east side and the line of temples facing it, at correct relative positions, sizes and orientations
+- Krishna Mandir: stone shikhara with its pavilion tiers and the Garuda statue on its pillar facing it
+- Multi-tiered pagoda temples: deep eaves, tile roofs, gilded finials, bells and long metal banners hanging from the top roof
+- Carving density is the point of this place: roof struts with deities, latticed windows, carved door frames and toranas, all with visible depth and fine detail up close
+- Materials: red brick with dark glazed accent bricks, weathered dark wood (sal), grey stone, gilded copper and brass that catch the light
+- Statues: stone elephants and lions guarding temple stairs, the kneeling king on his pillar under the cobra hood
+- Temples are solid from the outside only: you can climb their plinth steps and walk around them, but you cannot go inside. No interiors are modeled.
+- The palace's open-air courtyards are walkable; its rooms are not. Tusha Hiti's carved stone bath and the golden gate are seen from the courtyards.
+- Manga Hiti: the sunken water spout with running water
+- 1980s street life, lively but never crowded. The square should feel calm and roomy, with open paving between groups of people:
+  - About 40-60 people in the whole square at once, in small groups and alone; about 10-15 vendors; a handful of bicycles; at most one tempo or car in sight at a time
+  - Vendors sitting on the paving and temple plinths with goods spread on cloth, straw mats and round bamboo trays (nanglo): vegetables, fruit, spices, rice and lentils, clay pots, brass and copper pots, bangles, cloth
+  - Food: roasted peanuts and corn, sugarcane, oranges, Newar snacks (bara, chatamari), tea served in glass tumblers
+  - A porter carrying a load in a doko basket on a forehead strap (namlo); a seller carrying two baskets on a shoulder pole (kharpan)
+  - Small shopfronts on the ground floor of the houses: wooden shutters, hand-painted Devanagari signboards, glass jars of sweets, cigarettes sold singly, a tailor at a pedal sewing machine, a shop with a transistor radio playing
+  - A curio and thangka stall or two, and a few trekkers and hippie-era tourists with backpacks and cameras
+  - People: men in daura-suruwal and dhaka topi, Newar women in haku patasi, other women in saris and shawls, old men resting on the patis (open rest houses) and temple steps, men playing cards or the board game bagh-chal, children playing with marbles and spinning tops, students in school uniform walking home
+  - Animals: pigeons that take off when you get close, street dogs asleep in the sun, a wandering cow, goats, chickens
+  - Daily life: grain drying on mats in the sun, washing and fetching water at Manga Hiti, women carrying brass water jars (gagri), worshippers making offerings and ringing bells, butter lamps and incense smoke at shrines, prayer flags
+- Puddles after a passing shower: a short rain fell about an hour ago. The paving is mostly dry again, but water still stands in the low, worn spots.
+  - Placement: in dips of the uneven brick and stone paving, along the drains, at the foot of temple plinths, near Manga Hiti where water spills over, and under the eaves where roofs still drip. Irregular natural shapes that follow the ground, never perfect circles. About 15-25 puddles across the square, from palm-sized to a few meters wide.
+  - Reflections: each puddle mirrors the temples, the golden sky and the people walking past, with correct Fresnel (strong at a low angle, see-through to the wet bricks and mud below when looking straight down). Shallow puddles are muddy and brownish; deeper ones are darker and clearer.
+  - Real waves on the surface, all running on the GPU:
+    - Expanding rings that fade out, where drops fall from roof eaves and spout tips, at an irregular rhythm per drip spot
+    - Rings and small splashes when you, people, bicycle wheels or animals step through, and small rings when pigeons or dogs drink, with a soft splash sound
+    - Fine wind ripples that drift across in gusts, so the reflection wobbles and breaks up, then settles flat again
+    - Overlapping rings interfere naturally instead of simply adding up
+  - Wet surroundings: a darker, shinier wet rim around each puddle that fades to dry, wet streaks below dripping eaves, damp stone at Manga Hiti
+  - Small floating things: a marigold petal, a leaf, a bit of straw that bob on the ripples
+  - Ripple events come from a fixed preallocated pool (zero per-frame allocations).
+  - Per preset: High has screen-space reflections with a sky fallback and full ripples; Medium has cheaper reflections and fewer simultaneous rings; Low reflects only the sky and a blurred tint of the buildings, with simple rings.
+- Lighting: fixed golden hour, late afternoon. Low warm sun, long soft shadows across the paving, gilded roofs glowing, warm bounce light from brick, soft haze and wood smoke toward the hills. No day/night cycle.
+- Film look (on by default, toggle with V): subtle grain and the warm, slightly faded colors of 1980s color film, never so strong that it hides detail
+- World: bounded by surrounding streets and houses; the edge must not be visible from the starting point
+
+CONTROLS
+- Walking only, on foot at eye height: WASD move, mouse look (pointer lock), Shift to walk faster, Space for a small hop
+- Collision with the ground, steps, plinths, walls, statues and stalls; you step up stairs and plinths smoothly
+- Number keys 1-6 jump to fixed viewpoints
+- V toggles the film look; M toggles sound; H shows performance stats; Esc opens the menu
+- Touch: one finger walks and steers, as in Abyssal Garden; a menu button in the corner
+- Dev build only (npm run build:dev, as in Abyssal Garden): F walks the camera along the scripted 60 s path through the whole square, B runs that path as a benchmark and reports frame and GPU times
+
+TARGET
+- A typical laptop with integrated graphics: Windows 11, Chrome 157, Intel Iris Xe or AMD Radeon 680M/780M, 60 Hz 1920x1080 screen.
+- 1920x1080 at full resolution on Medium: steady 60 fps. GPU frame time <= 14 ms average, 99th percentile <= 16.7 ms, no frame > 25 ms during a scripted 60 s walk-through.
+- Design for this hardware from the start: integrated GPUs share memory bandwidth with the CPU, so keep overdraw, full-screen passes, shadow-map resolution and texture-sized buffers small. Detail should come from clever geometry and shading, not brute force.
+
+DETAIL LEVELS: HIGH, MEDIUM, LOW
+Two separate systems, both required:
+1. Quality presets, chosen in the menu (the current one is lit, the choice is remembered):
+   - High: the full scene, for stronger integrated GPUs and any dedicated GPU. 1080p at 60 fps on a Radeon 780M.
+   - Medium: the target. 1080p at 60 fps on Iris Xe and Radeon 680M. Fewer small props and people details, smaller shadow maps, cheaper atmosphere.
+   - Low: older integrated graphics and phones. 30-60 fps, starts at a lower render resolution, simplest lighting, no film grain pass, fewer people and pigeons.
+   - The first visit picks a preset from the detected GPU and screen; if the frame rate stays too low, it lowers render resolution in small steps, then drops one preset.
+   - Every preset shows the same square: same monuments, same layout, same mood. Lower presets only remove fine detail.
+2. Distance levels of detail for every object: High near the camera, Medium in the middle distance, Low far away.
+   - Each generator (roofs, struts, windows, statues, people, goods) produces all three levels from the same parameters, so no extra source code per monument.
+   - Carvings go from real geometry up close, to shading-only relief in the middle, to flat color far away.
+   - People and animals go from full figures to simple shapes to impostors.
+   - Transitions blend smoothly (dithered cross-fade or morph), never visibly popping.
+   - Lower quality presets pull the switching distances closer.
+- quality.js holds the presets; lod.js (in core/) holds the distance levels. All switching distances and per-preset counts are named constants in those two files.
+
+VERIFICATION
+- Visual critic: a separate subagent that sees ONLY your renders and the reference photos, never your code or reasoning. Give it 6 fixed camera poses (the 6 viewpoints) rendered at 1920x1080 in GPU-accelerated Chrome on each of High, Medium and Low, plus a short recording of the walk-through to catch shimmer, aliasing, LOD popping and banding. Medium must still look beautiful; Low must still clearly be Patan Durbar Square. It returns prioritized, concrete defects, including "this does not match the real monument", anything that looks newer than the 1980s, crowds that look too dense or too empty, and puddles that look fake (mirror-perfect, wrong shape, ripples that don't spread or fade like real water). At least one viewpoint shows a puddle reflecting a temple at golden hour. Iterate until it reports nothing above "minor".
+- Code critic: a separate subagent that reads ONLY the source folder. It flags unclear names, magic numbers, files doing more than one thing, duplicated code and missing header comments. Iterate until it reports nothing above "minor".
+- Performance: GPU timestamp queries plus a frame-time log from the scripted walk-through at 1920x1080, for each preset, on integrated graphics (Iris Xe or Radeon 680M/780M). Report average, 99th percentile and max per preset. If no integrated GPU is available for testing, say so plainly, test on what is available with the GPU clocks limited or a frame-time budget scaled to match, and mark the results as estimates.
+- Size: the build output is within the size budget.
+
+DONE WHEN: all four verification gates pass and everything is committed. Deliver index.html, the source folder, REFERENCES.md, the bundle size with its breakdown, the perf report and both critics' final reviews, all in /mnt/Projects/Backend/patan-durbar/. Then tell me to open /mnt/Projects/Backend/patan-durbar/index.html in Chrome, with the controls and the 6 viewpoints to try.

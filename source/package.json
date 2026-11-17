@@ -1,0 +1,14 @@
+{
+  "name": "patan-durbar",
+  "private": true,
+  "description": "A walkable procedural recreation of Patan Durbar Square in the mid-1980s, rendered with WebGPU and bundled into one HTML file",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:readable": "node build.mjs --readable",
+    "build:dev": "node build.mjs --dev"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
