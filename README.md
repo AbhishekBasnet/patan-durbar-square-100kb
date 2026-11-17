@@ -35,7 +35,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **81.6 KB** minified, 30.8 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **81.8 KB** minified, 30.9 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -77,7 +77,7 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/look/shaders/lighting.wgsl.js` | Sun shadows, sky occlusion under eaves, bounce light, highlights |
 | `src/look/shaders/brick, wood, stone, gold, tile .wgsl.js` | One file per material look |
 | `src/look/shaders/architecture.wgsl.js` | Picks the material per vertex and lights it |
-| `src/look/shaders/water.wgsl.js` | The puddle and Manga Hiti's water: outlines, Fresnel reflections, ripples, wind, a floating petal, the spout streams |
+| `src/look/shaders/water.wgsl.js` | The puddle and Manga Hiti's water: outlines, Fresnel reflections, steady rings where the streams land, foam, footstep ripples, wind, the spout streams |
 | `src/look/shaders/sky.wgsl.js`, `noise.wgsl.js` | Sky, shared noise |
 
 ## Easy first tweaks

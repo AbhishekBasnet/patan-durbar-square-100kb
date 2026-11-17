@@ -72,7 +72,6 @@ The palace wings use the same generator as the houses: storeys with glazed bands
 |---|---|---|
 | The puddle in front of Krishna Mandir | The brief: a shower about an hour ago | One big puddle, about 7 x 4 m, to show the reflections. The user chose this over scattered puddles. Its spot is **(plausible)**. |
 | Manga Hiti water | Photos of Manga Hiti | Three streams from the makara spouts into knee-deep water filling the pit floor. The lowest steps and the trough are under water. The water level is **(plausible)**, chosen by the user. |
-| Floating things | Marigold offerings, fallen leaves, straw | One on each water surface **(plausible)**. |
 
 ## People, props, animals
 

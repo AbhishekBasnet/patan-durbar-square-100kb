@@ -1,6 +1,7 @@
 // WGSL for all water: the puddle left by the shower and Manga Hiti's pool (a soft irregular outline or a
 // stone basin, a dark wet rim, Fresnel reflections of the square and sky, muddy or clear depth, rings from
-// the streams and footsteps, wind ripples in gusts, a floating petal or leaf), and the streams from the spouts.
+// footsteps, steady rings where the streams land that weaken with distance, a gentle ripple over all the water
+// and wind in gusts), and the streams from the spouts.
 // Depends on frameUniforms, noise and lighting WGSL.
 
 import { frameUniformsWgsl } from './frameUniforms.wgsl.js';
@@ -8,10 +9,12 @@ import { noiseWgsl } from './noise.wgsl.js';
 import { lightingWgsl } from './lighting.wgsl.js';
 
 export const rippleEventCapacity = 32; // the largest pool any preset uses (quality.js)
+export const waveSourceCapacity = 4; // steady wave sources: where the streams land
 
 export const waterWgsl = frameUniformsWgsl + noiseWgsl + lightingWgsl + /* wgsl */ `
 struct WaterUniforms {
   rippleEvents: array<vec4f, ${rippleEventCapacity}>, // x, z, start time, strength
+  waveSources: array<vec4f, ${waveSourceCapacity}>, // x, z, strength, 0: water falling here without pause
   rippleCountAndWind: vec4f, // events in use, wind gust strength, height of the mirrored water, 1 if mirrored this frame
 }
 @group(1) @binding(0) var<uniform> water: WaterUniforms;
@@ -26,6 +29,26 @@ const rippleLifeSeconds = 2.6;
 const rippleFadePerSecond = 1.6;
 const windRippleScale = 16.0; // waves per metre in a gust
 const windSlopeStrength = 0.35; // how much a full gust tilts the surface
+const stillWaterRipple = 0.12; // the gentle ripple all water keeps, even between gusts
+const fallingWaterWavelengthMetres = 0.14;
+const fallingWaterWaveSpeed = 0.35; // metres per second
+const fallingWaterReachMetres = 4.5; // the rings have mostly died away by here
+const rippleSheenStrength = 3.0;
+const foamRadiusMetres = 0.12;
+
+// Broken white water around each spot where a stream lands, flickering as the water churns.
+fn fallingWaterFoam(groundPoint: vec2f) -> f32 {
+  let time = frame.cameraPositionAndTime.w;
+  var foam = 0.0;
+  for (var index = 0; index < ${waveSourceCapacity}; index++) {
+    let source = water.waveSources[index];
+    if (source.z <= 0.0) { continue; }
+    let pointDistance = length(groundPoint - source.xy);
+    let churn = valueNoise2D(groundPoint * 40.0 + vec2f(time * 5.0, -time * 4.0));
+    foam = max(foam, (1.0 - smoothstep(foamRadiusMetres * 0.3, foamRadiusMetres, pointDistance)) * (0.4 + 0.6 * churn));
+  }
+  return foam * 0.85;
+}
 const rimWidth = 0.32; // share of the puddle size the wet rim reaches beyond the water
 
 // ---- water bodies: one quad each
@@ -74,8 +97,21 @@ fn waterSlope(groundPoint: vec2f) -> vec2f {
     let waveSlope = cos(behindFront * 6.2832 / rippleWavelengthMetres) * envelope * 0.35;
     slope += toPoint / pointDistance * waveSlope;
   }
-  // wind: gusts drift across the square; in a gust fine ripples break up the reflection, then it settles
-  let gust = smoothstep(0.6, 0.9, valueNoise2D(groundPoint * 0.04 + vec2f(time * 0.09, time * 0.03))) * water.rippleCountAndWind.y;
+  // steady rings around each falling stream, weaker the further they travel
+  for (var index = 0; index < ${waveSourceCapacity}; index++) {
+    let source = water.waveSources[index];
+    if (source.z <= 0.0) { continue; }
+    let toPoint = groundPoint - source.xy;
+    let pointDistance = length(toPoint) + 0.0001;
+    let wavenumber = 6.2832 / fallingWaterWavelengthMetres;
+    // two close frequencies beat against each other, so the rings come in uneven pulses like real falling water
+    let phase = pointDistance * wavenumber - time * wavenumber * fallingWaterWaveSpeed;
+    let pulse = 0.65 + 0.35 * sin(pointDistance * 9.0 - time * 3.1);
+    let strength = source.z * exp(-pointDistance * 3.0 / fallingWaterReachMetres) / (1.0 + pointDistance * 1.5);
+    slope += toPoint / pointDistance * cos(phase) * strength * pulse * 0.45;
+  }
+  // wind: a gentle ripple everywhere, stronger in gusts that drift across and break up the reflection
+  let gust = (stillWaterRipple + smoothstep(0.6, 0.9, valueNoise2D(groundPoint * 0.04 + vec2f(time * 0.09, time * 0.03)))) * water.rippleCountAndWind.y;
   if (gust > 0.001) {
     let wavePoint = groundPoint * windRippleScale + vec2f(time * 2.1, time * 1.3);
     let here = valueNoise2D(wavePoint);
@@ -94,23 +130,6 @@ fn reflectedColor(screenUv: vec2f, slope: vec2f, reflectedDirection: vec3f, uses
   let sky = toneMapToDisplay(skyRadiance(reflectedDirection)).rgb;
   let buildingTint = vec3f(0.36, 0.2, 0.13);
   return mix(buildingTint, sky, smoothstep(0.05, 0.45, reflectedDirection.y));
-}
-
-// A marigold petal, a leaf or a bit of straw on each water body, drifting and bobbing on the ripples.
-fn floatingThing(localPoint: vec2f, seed: f32, slope: vec2f) -> vec4f {
-  let time = frame.cameraPositionAndTime.w;
-  let kind = floor(fract(seed * 7.13) * 3.0);
-  let home = vec2f(fract(seed * 3.7), fract(seed * 5.3)) * 0.9 - 0.45;
-  let drift = vec2f(sin(time * 0.13 + seed * 9.0), cos(time * 0.11 + seed * 5.0)) * 0.08 + slope * 0.3;
-  let toThing = localPoint - home - drift;
-  let angle = seed * 6.0 + time * 0.05;
-  let turned = vec2f(toThing.x * cos(angle) + toThing.y * sin(angle), -toThing.x * sin(angle) + toThing.y * cos(angle));
-  var size = vec2f(0.06, 0.04);
-  var color = vec3f(0.95, 0.45, 0.04); // marigold
-  if (kind == 1.0) { size = vec2f(0.09, 0.04); color = vec3f(0.22, 0.24, 0.07); } // leaf
-  if (kind == 2.0) { size = vec2f(0.12, 0.008); color = vec3f(0.7, 0.58, 0.3); } // straw
-  let inside = 1.0 - smoothstep(0.8, 1.0, length(turned / size));
-  return vec4f(color, inside);
 }
 
 @fragment fn waterBodyFragment(input: WaterBodyVaryings) -> @location(0) vec4f {
@@ -140,15 +159,21 @@ fn floatingThing(localPoint: vec2f, seed: f32, slope: vec2f) -> vec4f {
   // shallow water is muddy and brown, deep water darker and clearer
   let murk = mix(0.45, 0.15, depthLook);
   let bottomTint = mix(vec3f(0.2, 0.12, 0.06), vec3f(0.03, 0.03, 0.025), depthLook);
-  let waterColor = mirrored * fresnel + bottomTint * murk * (1.0 - fresnel);
-  let waterAlpha = fresnel + murk * (1.0 - fresnel);
+  // ripples catch the sky on their slopes even when you look straight down: a moving sheen of light
+  let sheen = clamp(length(slope) * rippleSheenStrength, 0.0, 0.6);
+  let skyGlint = toneMapToDisplay(skyRadiance(reflectedDirection)).rgb;
+  // white water where a stream strikes the surface
+  let foam = fallingWaterFoam(input.worldPosition.xz);
+  var waterColor = mirrored * fresnel + bottomTint * murk * (1.0 - fresnel);
+  var waterAlpha = fresnel + murk * (1.0 - fresnel);
+  waterColor = mix(waterColor, skyGlint, sheen * (1.0 - fresnel));
+  waterAlpha = mix(waterAlpha, 1.0, sheen * (1.0 - fresnel));
+  waterColor = mix(waterColor, vec3f(0.85, 0.82, 0.76), foam);
+  waterAlpha = mix(waterAlpha, 1.0, foam);
 
   // premultiplied: the bricks below show through, darkened as if wet
   var color = waterColor * waterAmount;
   var alpha = waterAlpha * waterAmount + rimAmount * 0.28;
-  let floater = floatingThing(input.localPoint, seed, slope) * waterAmount;
-  color = mix(color, floater.rgb * 0.6, floater.a);
-  alpha = mix(alpha, 1.0, floater.a);
   return vec4f(color, alpha);
 }
 

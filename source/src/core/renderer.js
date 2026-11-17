@@ -6,7 +6,7 @@
 import { bytesPerVertex } from './meshBuilder.js';
 import { skyWgsl } from '../look/shaders/sky.wgsl.js';
 import { architectureWgsl } from '../look/shaders/architecture.wgsl.js';
-import { waterWgsl, rippleEventCapacity } from '../look/shaders/water.wgsl.js';
+import { waterWgsl, rippleEventCapacity, waveSourceCapacity } from '../look/shaders/water.wgsl.js';
 
 export const frameUniformFloatCount = 100; // matches FrameUniforms in frameUniforms.wgsl.js
 export const sunShadowMatrixOffset = 64;
@@ -136,7 +136,9 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const streamVertexCount = 12 * 6; // streamSegmentCount in water.wgsl.js, six corners per segment
   const waterBodyBuffer = createBufferWithData(waterField.bodyInstances, GPUBufferUsage.VERTEX);
   const streamBuffer = createBufferWithData(waterField.streamInstances, GPUBufferUsage.VERTEX);
-  const waterUniforms = new Float32Array((rippleEventCapacity + 1) * 4);
+  const waterUniforms = new Float32Array((rippleEventCapacity + waveSourceCapacity + 1) * 4);
+  const waterSettingsOffset = (rippleEventCapacity + waveSourceCapacity) * 4;
+  waterUniforms.set(waterField.waveSources, rippleEventCapacity * 4);
   const waterUniformBuffer = device.createBuffer({ size: waterUniforms.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
   const reflectionSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
   let waterBindGroup; // rebuilt with the reflection image on resize
@@ -275,10 +277,10 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
     device.queue.writeBuffer(uniformBuffer, 0, frameUniforms);
     device.queue.writeBuffer(lodFadeBuffer, 0, detailSelector.fades);
     waterUniforms.set(waterField.rippleEvents);
-    waterUniforms[rippleEventCapacity * 4] = waterField.rippleCapacity;
-    waterUniforms[rippleEventCapacity * 4 + 1] = waterField.windGustStrength;
-    waterUniforms[rippleEventCapacity * 4 + 2] = drawReflection ? mirrorPlaneHeight : 0;
-    waterUniforms[rippleEventCapacity * 4 + 3] = hasReflection && drawReflection ? 1 : 0;
+    waterUniforms[waterSettingsOffset] = waterField.rippleCapacity;
+    waterUniforms[waterSettingsOffset + 1] = waterField.windGustStrength;
+    waterUniforms[waterSettingsOffset + 2] = drawReflection ? mirrorPlaneHeight : 0;
+    waterUniforms[waterSettingsOffset + 3] = hasReflection && drawReflection ? 1 : 0;
     device.queue.writeBuffer(waterUniformBuffer, 0, waterUniforms);
     const canvasView = context.getCurrentTexture().createView();
     if (sampleCount > 1) colorAttachment.resolveTarget = canvasView;

@@ -1,6 +1,7 @@
 // Where the water is and what disturbs it: one big puddle left by the shower in front of Krishna Mandir, and
-// Manga Hiti's knee-deep pool with the three streams pouring into it from the makara spouts. Ripple rings come
-// from one fixed pool of events (no allocation while running): the streams' drops landing, and your feet.
+// Manga Hiti's knee-deep pool with the three streams pouring into it from the makara spouts. Where a stream
+// lands it sends out rings without pause (steady wave sources); footsteps start single rings from one fixed
+// pool of events (no allocation while running).
 // Depends on layout.js, blocks.js (placing), mangaHiti.js (its water) and math.js; drawn by water.wgsl.js.
 
 import { monumentLayout } from './layout.js';
@@ -12,7 +13,7 @@ export const floatsPerWaterBody = 12;
 const waterSeed = 1986;
 const footstepStrideMetres = 0.75;
 const footstepStrength = 1.6;
-const streamLandingSeconds = 0.09; // time between drops of a stream hitting the water
+const streamLandingStrength = 1.0;
 const windGustStrength = 0.6; // easy tweak: 0 for still water
 // The puddle: centre, half length and width (metres), turn (radians), depth look (0 muddy, 1 deep and clear).
 const showcasePuddle = { x: 3.0, z: -20.5, halfX: 3.6, halfZ: 2.0, rotation: 0.7, depthLook: 0.85 };
@@ -43,9 +44,11 @@ export function createWaterField(quality) {
     const fallSeconds = Math.sqrt(2 * stream.drop / 9.81), reach = stream.outflowMetresPerSecond * fallSeconds;
     return {
       spout: [spout.x, stream.y, spout.z], speed: stream.outflowMetresPerSecond, direction: [Math.cos(turn), Math.sin(turn)], drop: stream.drop,
-      landing: [spout.x + Math.cos(turn) * reach, spout.z + Math.sin(turn) * reach], nextDrop: random(),
+      landing: [spout.x + Math.cos(turn) * reach, spout.z + Math.sin(turn) * reach],
     };
   });
+  // each stream's landing spot is a steady wave source: x, z, strength, 0
+  const waveSources = new Float32Array(streams.flatMap((stream) => [...stream.landing, streamLandingStrength, 0]));
   const streamInstances = new Float32Array(streams.length * 8);
   streams.forEach((stream, index) => streamInstances.set([...stream.spout, stream.speed, ...stream.direction, stream.drop, 0], index * 8));
 
@@ -73,16 +76,10 @@ export function createWaterField(quality) {
 
   let lastStrideIndex = 0;
   return {
-    bodyInstances, bodyCount: bodies.length, bodyBounds, streamInstances, streamCount: streams.length,
+    bodyInstances, bodyCount: bodies.length, bodyBounds, streamInstances, streamCount: streams.length, waveSources,
     rippleEvents, rippleCapacity, windGustStrength, startRipple,
-    // Called once per frame: stream drops and footsteps start new rings.
+    // Called once per frame: footsteps in the water start new rings.
     update(time, camera) {
-      for (let index = 0; index < streams.length; index++) {
-        const stream = streams[index];
-        if (time < stream.nextDrop) continue;
-        startRipple(stream.landing[0] + random.between(-0.03, 0.03), stream.landing[1] + random.between(-0.03, 0.03), time, 0.7);
-        stream.nextDrop = time + streamLandingSeconds * random.between(0.5, 1.5);
-      }
       const strideIndex = Math.floor(camera.bobDistance / footstepStrideMetres);
       if (strideIndex !== lastStrideIndex) {
         lastStrideIndex = strideIndex;
