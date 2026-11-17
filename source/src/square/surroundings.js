@@ -14,6 +14,7 @@ const roofHeightMetres = 1.9;
 const roofOverhangMetres = 0.7;
 const alleyBackHouseDistanceMetres = 9; // how far down an alley the closing house stands
 const plasteredHouseShare = 0.3;
+const frontSetbackMetres = [0, 1.4]; // house fronts jog in and out instead of forming one flat wall
 const surroundingsSeed = 1985;
 
 const { west, east, north, south } = squareBounds;
@@ -63,9 +64,9 @@ function addFrontage(blocks, random, frontage) {
   let distance = 0;
   const addRowHouse = (width) => {
     const depth = random.between(...houseDepthMetres);
-    const middle = distance + width / 2;
-    addHouse(blocks, random, frontage.startX + alongX * middle + backX * depth / 2,
-      frontage.startZ + alongZ * middle + backZ * depth / 2, frontage.facingDegrees, width, depth);
+    const middle = distance + width / 2, setback = random.between(...frontSetbackMetres);
+    addHouse(blocks, random, frontage.startX + alongX * middle + backX * (depth / 2 + setback),
+      frontage.startZ + alongZ * middle + backZ * (depth / 2 + setback), frontage.facingDegrees, width, depth);
     distance += width;
   };
   while (distance < length) {
