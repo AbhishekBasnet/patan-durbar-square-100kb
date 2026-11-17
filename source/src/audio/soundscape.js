@@ -7,11 +7,13 @@ import { createNoiseBuffer, startWind, startRunningWater, strikeBell } from './a
 import { monumentLayout } from '../square/layout.js';
 import { createRandom } from '../core/math.js';
 
-const masterVolume = 0.8;
+const masterVolume = 1.0;
 const windGustSeconds = [11, 17]; // two slow cycles beating against each other
-const windCalmLevel = 0.06;
-const windGustLevel = 0.22;
-const eaveChimesPerSecondInGust = 1.6;
+const windCalmLevel = 0.12;
+const windGustLevel = 0.42;
+const eaveChimesPerSecond = [0.35, 1.8]; // in calm air, in a full gust
+const chimeNotesHertz = [2093, 2349, 2637, 3136, 3520]; // eave bells of slightly different sizes
+const chimeAudibleMetres = 18; // chimes stay clear across the square
 const templeBellEverySeconds = [9, 22];
 const talejuBellEverySeconds = [45, 100];
 const pitWaterBoost = 2.2; // down in the pit the water fills your ears
@@ -48,7 +50,7 @@ export function createSoundscape(camera) {
       const noise = createNoiseBuffer(context);
       wind = startWind(context, noise, master);
       const pit = rows.mangaHiti;
-      water = startRunningWater(context, noise, createPanner(pit.x - 5, -1.6, pit.z, 1.5));
+      water = startRunningWater(context, noise, createPanner(pit.x - 5, -1.6, pit.z, 4));
     },
     toggleMute() {
       isMuted = !isMuted;
@@ -64,20 +66,27 @@ export function createSoundscape(camera) {
       const gust = Math.max(0, 0.5 * Math.sin(time * 2 * Math.PI / windGustSeconds[0]) + 0.5 * Math.sin(time * 2 * Math.PI / windGustSeconds[1] + 1.3));
       wind.level.gain.setTargetAtTime(windCalmLevel + (windGustLevel - windCalmLevel) * gust, context.currentTime, 0.4);
       wind.filter.frequency.setTargetAtTime(280 + 500 * gust, context.currentTime, 0.4);
-      // the eave bells chime in the gusts
-      if (random() < eaveChimesPerSecondInGust * gust * secondsElapsed) {
-        ringAt(rows[templeNames[Math.floor(random() * templeNames.length)]], 7, 4, { fundamental: random.between(1900, 3200), loudness: 0.05, decaySeconds: 1.4 });
+      // the eave bells chime in little clusters, more often as the wind gusts
+      const chimeRate = eaveChimesPerSecond[0] + (eaveChimesPerSecond[1] - eaveChimesPerSecond[0]) * gust;
+      if (random() < chimeRate * secondsElapsed) {
+        const temple = rows[templeNames[Math.floor(random() * templeNames.length)]];
+        const noteCount = 2 + Math.floor(random() * 3);
+        for (let note = 0; note < noteCount; note++) {
+          setTimeout(() => ringAt(temple, 6, chimeAudibleMetres, {
+            fundamental: chimeNotesHertz[Math.floor(random() * chimeNotesHertz.length)], loudness: 0.18, decaySeconds: 1.8,
+          }), note * random.between(90, 260));
+        }
       }
       if (time > nextTempleBell) {
         nextTempleBell = time + random.between(...templeBellEverySeconds);
-        ringAt(rows[templeNames[Math.floor(random() * templeNames.length)]], 2, 3, { fundamental: random.between(650, 950), loudness: 0.12, decaySeconds: 3 });
+        ringAt(rows[templeNames[Math.floor(random() * templeNames.length)]], 2, 12, { fundamental: random.between(650, 950), loudness: 0.3, decaySeconds: 3.5 });
       }
       if (time > nextTalejuBell) {
         nextTalejuBell = time + random.between(...talejuBellEverySeconds);
-        ringAt(rows.talejuBell, 3, 8, { fundamental: 92, loudness: 0.35, decaySeconds: 9 });
+        ringAt(rows.talejuBell, 3, 20, { fundamental: 92, loudness: 0.6, decaySeconds: 9 });
       }
       // down in Manga Hiti the walls hold the sound of the water in
-      water.gain.setTargetAtTime(eye[1] < 0 ? 0.5 * pitWaterBoost : 0.5, context.currentTime, 0.3);
+      water.gain.setTargetAtTime(eye[1] < 0 ? 0.8 * pitWaterBoost : 0.8, context.currentTime, 0.3);
     },
   };
 }
