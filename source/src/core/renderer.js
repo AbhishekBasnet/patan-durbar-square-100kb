@@ -1,12 +1,10 @@
-// The WebGPU renderer: opens the device, sizes the canvas within the preset's pixel budget, builds the sky,
-// architecture and block pipelines, draws the sun shadow map and sky occlusion map once at load, and draws
+// The WebGPU renderer: opens the device, sizes the canvas within the preset's pixel budget, builds the sky
+// and architecture pipelines, draws the sun shadow map and sky occlusion map once at load, and draws
 // one frame per call. Optional GPU timestamps measure the frame for the H stats and the benchmark.
-// Depends on meshBuilder.js, blocks.js (instance layout), lighting.js and the WGSL in look/shaders/.
+// Depends on meshBuilder.js (vertex layout) and the WGSL in look/shaders/.
 
-import { createPrismMesh, bytesPerVertex } from './meshBuilder.js';
-import { blockShapes, sidesPerShape, floatsPerBlockInstance } from '../square/blocks.js';
+import { bytesPerVertex } from './meshBuilder.js';
 import { skyWgsl } from '../look/shaders/sky.wgsl.js';
-import { blockoutWgsl } from '../look/shaders/blockout.wgsl.js';
 import { architectureWgsl } from '../look/shaders/architecture.wgsl.js';
 
 export const frameUniformFloatCount = 96; // matches FrameUniforms in frameUniforms.wgsl.js
@@ -27,7 +25,7 @@ export async function openGpu() {
   return { adapter, device, canMeasureGpuTime };
 }
 
-export function createRenderer({ device, canMeasureGpuTime, canvas, quality, blockInstancesByShape, architectureVertexData, lightMapMatrices }) {
+export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices }) {
   const context = canvas.getContext('webgpu');
   const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
   const sampleCount = quality.antialiasingSamples;
@@ -93,13 +91,6 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, blo
   // the sky sits at the far plane (depth 0) and only fills pixels nothing else has drawn
   const skyPipeline = createScenePipeline(skyWgsl, 'skyVertex', 'skyFragment', [], { depthWriteEnabled: false, depthCompare: 'equal' }, 'none');
 
-  const blockBuffers = [
-    { arrayStride: 12, attributes: [attribute(0, 0, 'float32x3')] },
-    { arrayStride: floatsPerBlockInstance * 4, stepMode: 'instance', attributes: [attribute(1, 0, 'float32x4'), attribute(2, 16, 'float32x4'), attribute(3, 32, 'float32x4')] },
-  ];
-  const blockPipeline = createScenePipeline(blockoutWgsl, 'blockVertex', 'blockFragment', blockBuffers, sceneDepth);
-  const blockLightMapPipeline = createLightMapPipeline(blockoutWgsl, 'blockVertex', blockBuffers);
-
   const architectureBuffers = [{
     arrayStride: bytesPerVertex,
     attributes: [attribute(0, 0, 'float32x3'), attribute(1, 12, 'snorm8x4'), attribute(2, 16, 'uint8x4')],
@@ -110,25 +101,9 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, blo
   }]);
 
   // ---- geometry
-  const blockDraws = blockShapes.map((shape) => {
-    const mesh = createPrismMesh(sidesPerShape[shape]);
-    const instances = blockInstancesByShape[shape];
-    return {
-      meshBuffer: createBufferWithData(mesh, GPUBufferUsage.VERTEX), vertexCount: mesh.length / 3,
-      instanceBuffer: createBufferWithData(instances, GPUBufferUsage.VERTEX), instanceCount: instances.length / floatsPerBlockInstance,
-    };
-  }).filter((draw) => draw.instanceCount > 0);
   const architectureBuffer = createBufferWithData(architectureVertexData, GPUBufferUsage.VERTEX);
   const architectureVertexCount = architectureVertexData.byteLength / bytesPerVertex;
 
-  const drawBlocks = (pass) => {
-    for (let index = 0; index < blockDraws.length; index++) {
-      const draw = blockDraws[index];
-      pass.setVertexBuffer(0, draw.meshBuffer);
-      pass.setVertexBuffer(1, draw.instanceBuffer);
-      pass.draw(draw.vertexCount, draw.instanceCount);
-    }
-  };
   const drawArchitecture = (pass) => {
     pass.setVertexBuffer(0, architectureBuffer);
     pass.draw(architectureVertexCount);
@@ -149,8 +124,6 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, blo
     pass.setBindGroup(0, bindGroup);
     pass.setPipeline(architectureLightMapPipeline);
     drawArchitecture(pass);
-    pass.setPipeline(blockLightMapPipeline);
-    drawBlocks(pass);
     pass.end();
     device.queue.submit([encoder.finish()]);
   };
@@ -221,11 +194,9 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, blo
     const encoder = device.createCommandEncoder();
     const pass = encoder.beginRenderPass(readback ? timedScenePass : scenePass);
     pass.setBindGroup(0, sceneBindGroup);
-    // nearest and biggest first, so the depth test skips most hidden pixels; the sky fills what is left
+    // the buildings first, so the depth test skips hidden pixels; the sky fills what is left
     pass.setPipeline(architecturePipeline);
     drawArchitecture(pass);
-    pass.setPipeline(blockPipeline);
-    drawBlocks(pass);
     pass.setPipeline(skyPipeline);
     pass.draw(3);
     pass.end();

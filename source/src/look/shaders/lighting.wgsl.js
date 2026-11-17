@@ -63,7 +63,8 @@ fn shadeSurface(surface: SurfaceLook, worldPosition: vec3f, normal: vec3f, geome
 
   // specular: a normalised Blinn-Phong sun highlight and, for metal, the sky reflected
   let halfway = normalize(sunDirection + toCamera);
-  let shininess = 2.0 / max(surface.roughness * surface.roughness * surface.roughness * surface.roughness, 0.002) - 2.0;
+  // at least 1: pow(0, 0) is undefined in WGSL and turns fully rough surfaces black
+  let shininess = max(2.0 / max(surface.roughness * surface.roughness * surface.roughness * surface.roughness, 0.002) - 2.0, 1.0);
   let reflectance = mix(vec3f(0.04), surface.albedo, surface.metalness);
   let viewFacing = max(dot(normal, toCamera), 0.0);
   let fresnel = reflectance + (1.0 - reflectance) * pow(1.0 - viewFacing, 5.0) * (1.0 - surface.roughness);

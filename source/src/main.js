@@ -7,9 +7,7 @@ import { createInput } from './core/input.js';
 import { createWalkingCamera, buildColliders } from './core/camera.js';
 import { perspectiveReverseZ, viewFromYawPitch, multiplyMatrices, invertMatrix, degreesToRadians } from './core/math.js';
 import { squareBounds, viewpoints } from './square/layout.js';
-import { buildMonumentBlockout } from './square/blockout.js';
 import { buildSurroundings } from './square/surroundings.js';
-import { packBlockInstances } from './square/blocks.js';
 import { addPaving } from './square/paving.js';
 import { buildMonuments } from './monuments/allMonuments.js';
 import { MeshBuilder } from './core/meshBuilder.js';
@@ -42,16 +40,16 @@ async function start() {
 
   await showLoadingStep('Laying out the square…', 0.4);
   const architecture = new MeshBuilder();
-  addPaving(architecture);
-  const monumentSolids = buildMonuments(architecture);
-  const blocks = [...buildMonumentBlockout(), ...buildSurroundings()];
-  const camera = createWalkingCamera(buildColliders([...blocks, ...monumentSolids]), squareBounds);
+  const { solidBlocks, groundHoles } = buildMonuments(architecture);
+  const houseBlocks = buildSurroundings(architecture);
+  addPaving(architecture, groundHoles);
+  const camera = createWalkingCamera(buildColliders([...solidBlocks, ...houseBlocks]), squareBounds, groundHoles);
   const lightMapMatrices = computeLightMapMatrices();
 
   await showLoadingStep('Lighting the late afternoon…', 0.8);
   const renderer = createRenderer({
     device, canMeasureGpuTime, canvas, quality, lightMapMatrices,
-    blockInstancesByShape: packBlockInstances(blocks), architectureVertexData: architecture.toVertexData(),
+    architectureVertexData: architecture.toVertexData(),
   });
   addEventListener('resize', renderer.resize);
 

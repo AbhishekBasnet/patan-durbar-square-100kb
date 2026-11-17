@@ -74,3 +74,12 @@ export function addStrutsAlongWall(builder, { count, halfSpan, wallX, bottomY, e
     builder.push().translate(wallX, bottomY, z).rotateZ(-lean).addMesh(strut).pop();
   }
 }
+
+// Plain struts for ordinary houses: a square wooden post from the wall to the eave, no carving.
+export function addPlainStruts(builder, { count, halfSpan, bottomY, eaveX, topY }) {
+  builder.material(material.wood, 40).occlusion(0.7);
+  for (let index = 0; index < count; index++) {
+    const z = count === 1 ? 0 : -halfSpan + (index + 0.5) * (2 * halfSpan / count);
+    builder.addTube([[0.06, bottomY, z], [eaveX, topY, z]], 0.06, 4);
+  }
+}

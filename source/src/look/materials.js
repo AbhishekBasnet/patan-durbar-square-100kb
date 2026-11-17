@@ -1,5 +1,5 @@
 // Named materials of the square: their ids (stored in every vertex) and their look (colour, roughness,
-// metalness, weathering). The table is uploaded once and read by look/shaders/architecture.wgsl.js.
+// metalness, weathering). architecture.wgsl.js turns the table into WGSL constants.
 // Depends on nothing.
 
 // Material ids: the order matches the rows of materialTable below.
@@ -33,11 +33,3 @@ export const materialTable = [
   [0.45, 0.10, 0.05, 0.9, 0, 0.5], // red cloth and paint
   [0.2, 0.185, 0.16, 0.8, 0, 0.9], // carved stone
 ];
-
-export const floatsPerMaterial = 8;
-
-export function packMaterialTable() {
-  const data = new Float32Array(materialTable.length * floatsPerMaterial);
-  materialTable.forEach((row, index) => data.set(row, index * floatsPerMaterial));
-  return data;
-}

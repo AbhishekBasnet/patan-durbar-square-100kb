@@ -14,8 +14,8 @@ const toranaThicknessMetres = 0.07;
 const toranaSegmentCount = 9;
 
 // One rectangular frame around an opening: two jambs, a lintel and a sill (lintel and sill reach past).
-export function addCarvedFrame(builder, { halfWidth, bottom, top, depth, memberWidth, reach }) {
-  builder.material(material.wood, 70, 1).occlusion(0.9);
+export function addCarvedFrame(builder, { halfWidth, bottom, top, depth, memberWidth, reach, frameMaterial = material.wood }) {
+  builder.material(frameMaterial, 70, 1).occlusion(0.9);
   for (const side of [-1, 1]) {
     builder.addBox(0, bottom, side * halfWidth - (side > 0 ? 0 : memberWidth), depth, top, side * halfWidth + (side > 0 ? memberWidth : 0));
   }
@@ -43,7 +43,8 @@ export function addTorana(builder, { radius, y, isGilded }) {
 }
 
 // A complete doorway of clear opening width x height.
-export function addCarvedDoorway(builder, { width, height, hasTorana = true, isGilded = false }) {
+// isGilded gilds the torana; frameMaterial can gild the frames too (the palace's golden gate).
+export function addCarvedDoorway(builder, { width, height, hasTorana = true, isGilded = false, frameMaterial = material.wood }) {
   const halfWidth = width / 2;
   // closed door leaves, set back behind the frames, with the dark gap between them
   builder.material(material.wood, 40).occlusion(0.55);
@@ -56,7 +57,7 @@ export function addCarvedDoorway(builder, { width, height, hasTorana = true, isG
     addCarvedFrame(builder, {
       halfWidth: halfWidth + grow, bottom: thresholdHeightMetres, top: height + grow,
       depth: 0.05 + (frameCount - frame) * frameStepOutMetres, memberWidth: frameMemberWidthMetres,
-      reach: frame === frameCount - 1 ? lintelReachMetres : 0,
+      reach: frame === frameCount - 1 ? lintelReachMetres : 0, frameMaterial,
     });
   }
   const outerTop = height + frameCount * frameMemberWidthMetres;

@@ -1,5 +1,5 @@
-// Stepped temple plinths with a stair up the front, and the stone guardians (lions, elephants) that sit in
-// pairs beside the stairs. Parts are built in the monument's own frame: centred on the origin, front toward +x.
+// Stepped temple plinths with a stair up the front, and the pairs of stone guardians (from statues.js) that sit
+// beside the stairs. Parts are built in the monument's own frame: centred on the origin, front toward +x.
 // Each solid piece is also listed in `solids` for walking collision. Depends on meshBuilder.js, materials.js.
 
 import { material } from '../look/materials.js';
@@ -61,45 +61,4 @@ export function addStairGuardians(builder, solids, { stairWidth, plinth, pairCou
       addSolidBox(solids, x, z, guardianSizeMetres * 0.6, guardianSizeMetres * 0.44, 0, pedestalTop + guardianSizeMetres);
     }
   }
-}
-
-// A seated Newar temple lion (simha), 1 unit tall, facing +x: haunches, upright chest, curly mane, open jaw.
-export function addSeatedLion(builder) {
-  builder.material(material.carvedStone, 130);
-  builder.push().translate(-0.08, 0.2, 0).scale(0.26, 0.2, 0.2).addSphere(8, 5).pop(); // haunches
-  builder.push().translate(0.04, 0.42, 0).rotateZ(-0.35).scale(0.17, 0.26, 0.17).addSphere(8, 5).pop(); // chest
-  for (const side of [-1, 1]) {
-    builder.push().translate(0.16, 0, side * 0.08).addLathe([[0.045, 0], [0.04, 0.38], [0.0, 0.4]], 6).pop(); // front leg
-    builder.push().translate(0.15, 0.02, side * 0.08).scale(0.07, 0.04, 0.05).addSphere(6, 3).pop(); // paw
-  }
-  builder.push().translate(0.1, 0.72, 0);
-  builder.push().translate(-0.04, 0, 0).scale(0.12, 0.17, 0.2).addSphere(10, 5).pop(); // mane
-  builder.material(material.carvedStone, 150);
-  builder.push().scale(0.12, 0.12, 0.12).addSphere(8, 5).pop(); // head
-  builder.push().translate(0.1, -0.02, 0).scale(0.07, 0.05, 0.065).addSphere(6, 4).pop(); // muzzle
-  builder.material(material.darkRecess).addBox(0.12, -0.075, -0.04, 0.17, -0.045, 0.04); // open mouth
-  builder.material(material.carvedStone, 130);
-  for (const side of [-1, 1]) builder.push().translate(0.0, 0.11, side * 0.08).scale(0.035, 0.05, 0.03).addSphere(5, 3).pop(); // ears
-  builder.pop();
-  builder.addTube([[-0.3, 0.1, 0.05], [-0.38, 0.3, 0.08], [-0.3, 0.45, 0.1], [-0.24, 0.42, 0.1]], 0.025, 4); // curled tail
-}
-
-// A stone elephant, 1 unit tall at the back, facing +x: body, four legs, head, trunk curling down, flat ears.
-export function addStoneElephant(builder) {
-  builder.material(material.carvedStone, 120);
-  builder.push().translate(-0.05, 0.62, 0).scale(0.42, 0.3, 0.26).addSphere(10, 6).pop(); // body
-  for (const [legX, legZ] of [[0.22, 0.13], [0.22, -0.13], [-0.3, 0.13], [-0.3, -0.13]]) {
-    builder.push().translate(legX, 0, legZ).addLathe([[0.085, 0], [0.08, 0.5], [0.07, 0.55]], 7).pop();
-  }
-  builder.push().translate(0.38, 0.78, 0);
-  builder.push().scale(0.18, 0.2, 0.17).addSphere(8, 5).pop(); // head
-  for (const side of [-1, 1]) {
-    builder.push().translate(-0.04, 0.0, side * 0.17).rotateY(side * 0.3).scale(0.025, 0.17, 0.13).addSphere(6, 4).pop(); // ear
-  }
-  builder.addTube([[0.12, -0.05, 0], [0.2, -0.25, 0], [0.2, -0.5, 0], [0.26, -0.68, 0], [0.32, -0.66, 0]], 0.05, 6); // trunk
-  builder.material(material.carvedStone, 200);
-  for (const side of [-1, 1]) builder.addTube([[0.12, -0.12, side * 0.08], [0.22, -0.22, side * 0.1], [0.3, -0.2, side * 0.1]], 0.02, 4); // tusks
-  builder.pop();
-  // the saddle cloth, carved in stone
-  builder.material(material.carvedStone, 90).push().translate(-0.05, 0.86, 0).scale(0.28, 0.06, 0.28).addSphere(8, 3).pop();
 }

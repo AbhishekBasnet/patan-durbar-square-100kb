@@ -16,16 +16,19 @@ const pillarSideCount = 8;
 const capitalHeightMetres = 0.22;
 const entablatureHeightMetres = 0.42;
 
-// Stepped square plan: the middle of each face pushed out twice (the ratha projections).
-function steppedSquareRadius(angle, projection) {
-  const cosine = Math.abs(Math.cos(angle)), sine = Math.abs(Math.sin(angle));
-  const along = cosine > sine ? sine / cosine : cosine / sine; // 0 at a face's middle, 1 at the corner
+// Stepped polygon plan (square or octagon, flat faces at angles 0, 360/n, ...): the middle of each face pushed
+// out twice (the ratha projections). Returns the radius at `angle` for a unit apothem.
+function steppedPolygonRadius(angle, sideCount, projection) {
+  const faceAngle = 2 * Math.PI / sideCount;
+  const fromFaceStart = ((angle % faceAngle) + faceAngle) % faceAngle;
+  const fromFaceMiddle = Math.abs(fromFaceStart > faceAngle / 2 ? fromFaceStart - faceAngle : fromFaceStart);
+  const along = Math.tan(fromFaceMiddle) / Math.tan(faceAngle / 2); // 0 at a face's middle, 1 at the corner
   const pushOut = along < 0.3 ? 2 * projection : along < 0.62 ? projection : 0;
-  return (1 / Math.max(cosine, sine)) * (1 + pushOut);
+  return (1 / Math.cos(fromFaceMiddle)) * (1 + pushOut);
 }
 
 // The tower: `halfWidth` at the base, `height` tall, standing on y.
-export function addShikharaTower(builder, { y, halfWidth, height, withAmalaka = true }) {
+export function addShikharaTower(builder, { y, halfWidth, height, withAmalaka = true, sideCount = 4 }) {
   const profile = [];
   for (let band = 0; band < towerBandCount; band++) {
     for (const [share, ledge] of [[0, 1.04], [0.12, 1.0], [1, 1.0]]) {
@@ -34,7 +37,7 @@ export function addShikharaTower(builder, { y, halfWidth, height, withAmalaka = 
     }
   }
   builder.material(material.stone, 128).occlusion(1);
-  builder.push().translate(0, y, 0).addLathe(profile, towerSegmentCount, (angle) => steppedSquareRadius(angle, 0.07));
+  builder.push().translate(0, y, 0).addLathe(profile, towerSegmentCount, (angle) => steppedPolygonRadius(angle, sideCount, 0.07));
   const topRadius = halfWidth * (1 - towerTaper);
   if (withAmalaka) {
     // ribbed cushion, then the gilded pot and spike
@@ -60,22 +63,27 @@ export function addStonePillar(builder, solids, { x, z, y, height, radius }) {
   solids.push({ x, z, y, alongFront: radius * 2, across: radius * 2, height, shape: 'cylinder' });
 }
 
-// An open storey: pillars round the edge of a square of `halfSize`, a stone entablature on top, and a closed
-// stone core (halfSize `coreHalfSize`) inside with a dark doorway on each face. Returns the floor height above.
-export function addColonnadeStorey(builder, solids, { y, halfSize, height, pillarsPerSide, coreHalfSize, doorway }) {
-  const span = 2 * halfSize - 0.5;
-  for (let side = 0; side < 4; side++) {
-    for (let pillar = 0; pillar < pillarsPerSide; pillar++) {
-      const along = -span / 2 + span * pillar / (pillarsPerSide - 1);
-      const [x, z] = [[halfSize - 0.25, along], [along, halfSize - 0.25], [-halfSize + 0.25, -along], [-along, -halfSize + 0.25]][side];
+// An open storey: pillars round the edge of a square or octagon of apothem `halfSize`, a stone entablature on
+// top, and a closed stone core (apothem `coreHalfSize`) inside with a dark doorway on each of its four main
+// faces. Returns the floor height above.
+export function addColonnadeStorey(builder, solids, { y, halfSize, height, pillarsPerSide, coreHalfSize, doorway, sideCount = 4 }) {
+  const faceAngle = 2 * Math.PI / sideCount;
+  const pillarApothem = halfSize - 0.25, cornerRadius = pillarApothem / Math.cos(faceAngle / 2);
+  for (let side = 0; side < sideCount; side++) {
+    // corners of this face, then pillars spread between them (each corner pillar belongs to one face)
+    const angleA = (side - 0.5) * faceAngle, angleB = (side + 0.5) * faceAngle;
+    for (let pillar = 0; pillar < pillarsPerSide - 1; pillar++) {
+      const t = pillar / (pillarsPerSide - 1);
+      const x = Math.cos(angleA) * cornerRadius * (1 - t) + Math.cos(angleB) * cornerRadius * t;
+      const z = Math.sin(angleA) * cornerRadius * (1 - t) + Math.sin(angleB) * cornerRadius * t;
       addStonePillar(builder, solids, { x, z, y, height, radius: 0.16 });
     }
   }
   builder.material(material.stone, 135).occlusion(0.95);
-  builder.addCentredBox(halfSize, y + height, y + height + entablatureHeightMetres, halfSize);
+  builder.push().translate(0, y + height, 0).addPrism(sideCount, halfSize, entablatureHeightMetres).pop();
   builder.material(material.stone, 100).occlusion(0.5);
-  builder.addCentredBox(coreHalfSize, y, y + height, coreHalfSize);
-  solids.push({ x: 0, z: 0, y, alongFront: coreHalfSize * 2, across: coreHalfSize * 2, height, shape: 'box' });
+  builder.push().translate(0, y, 0).addPrism(sideCount, coreHalfSize, height, 1, 1, false).pop();
+  solids.push({ x: 0, z: 0, y, alongFront: coreHalfSize * 2, across: coreHalfSize * 2, height, shape: sideCount === 4 ? 'box' : 'cylinder' });
   if (doorway) onEachFace(builder, coreHalfSize, coreHalfSize, y, () => addCarvedDoorway(builder, { ...doorway, hasTorana: false }));
   return y + height + entablatureHeightMetres;
 }

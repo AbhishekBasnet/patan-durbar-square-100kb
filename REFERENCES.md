@@ -39,7 +39,7 @@ All temples on the west side face east toward the palace. North to south:
 | Royal Palace: Mul Chowk | WMF; KVPT | 1666, central courtyard. Façade only. |
 | Royal Palace: Sundari Chowk | KVPT | 1647, southern courtyard around the sunken Tusha Hiti bath. **Walkable.** Its entrance from the square is **(plausible)**: the real way in is through the palace. |
 | Degutale Temple | Wikipedia | Tall roof tower rising from the palace between Mul Chowk and Keshav Narayan Chowk. Exact position estimated. |
-| Taleju octagonal tower | Wikipedia | Octagonal three-roofed tower at the north-west corner of Mul Chowk, overlooking the square. Part of the palace, not a separate monument file. |
+| Taleju octagonal tower | Wikipedia | Three-roofed tower at the north-west corner of Mul Chowk, overlooking the square. **Simplified to a square plan** for now, because the roof generator only makes rectangular roofs. |
 
 Left out to keep the scope small (they exist, but are not modeled): Bhai Dega, the small Krishna temple near the bell, and the smaller shrines and chaityas around the square.
 
@@ -55,11 +55,15 @@ Left out to keep the scope small (they exist, but are not modeled): Bhai Dega, t
 | Krishna Mandir tiers | EAP166, Wikipedia | Two colonnaded storeys with kiosks crowned by small shikharas, and the central tower. Pillar counts are approximate. |
 | Paving | Period photos | Brick herringbone with dust-filled joints and worn paths. |
 
+## Palace front
+
+The palace wings use the same generator as the houses: storeys with glazed bands, latticed windows, a wide window row, and carved struts under one long roof. Their real fronts differ wing by wing. The spacing of windows and doors here is **(plausible)**, not surveyed. The golden gate and golden window of Keshav Narayan Chowk are gilded frames with a gilded torana.
+
 ## Surroundings
 
 | Item | Based on | Notes |
 |---|---|---|
-| Houses around the square | 1969–77 photos | Three- and four-storey brick houses, some plastered. Tile roofs with ridges along the street. Alleys end in more houses. Heights and widths are random within period-typical ranges **(plausible)**. |
+| Houses around the square | 1969–77 photos | Three- and four-storey brick houses, some plastered. Shops with wooden shutters on the ground floor, latticed windows and a window row above, tile roofs on plain struts. Alleys end in more houses. Heights, widths and the shop/doorway mix are random within period-typical ranges **(plausible)**. |
 | Paving | Period photos | Brick paving. Real patterns and stone paths come in step 2. |
 
 ## People, props, animals

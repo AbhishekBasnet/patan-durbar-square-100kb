@@ -5,20 +5,6 @@
 
 export const bytesPerVertex = 20;
 
-// A unit prism standing on y = 0 and reaching y = 1, with `sideCount` flat sides whose centres lie 1 unit
-// from the axis (a 4-sided prism is the box from -1 to 1). The blockout blocks and houses taper it per instance.
-export function createPrismMesh(sideCount) {
-  const builder = new MeshBuilder();
-  builder.addPrism(sideCount, 1, 1, 1, 1);
-  const corners = new Float32Array(builder.vertexCount * 3);
-  for (let index = 0; index < builder.vertexCount; index++) {
-    corners[index * 3] = builder.positions[index * 3];
-    corners[index * 3 + 1] = builder.positions[index * 3 + 1];
-    corners[index * 3 + 2] = builder.positions[index * 3 + 2];
-  }
-  return corners;
-}
-
 export class MeshBuilder {
   constructor() {
     this.positions = [];

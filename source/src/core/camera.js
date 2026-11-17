@@ -1,6 +1,7 @@
 // The walking camera: eye height above the feet, a gentle head bob, a small hop, and collision with the
 // ground, steps, plinths and walls (you step up anything lower than a stair and slide along everything else).
-// Depends on math.js; reads input.js state; colliders come from the solid blocks (blocks.js) and squareBounds.
+// Depends on math.js; reads input.js state; colliders come from the solid blocks (blocks.js), squareBounds and
+// the ground holes (sunken pits, whose floor is below the paving).
 
 import { clamp, degreesToRadians } from './math.js';
 
@@ -37,7 +38,7 @@ export function buildColliders(blocks) {
   return colliders;
 }
 
-export function createWalkingCamera(colliders, bounds) {
+export function createWalkingCamera(colliders, bounds, groundHoles) {
   const camera = {
     footPosition: new Float64Array(3),
     eyePosition: new Float64Array(3),
@@ -61,9 +62,18 @@ export function createWalkingCamera(colliders, bounds) {
     return Math.abs(along) < colliders[offset + 5] + margin && Math.abs(across) < colliders[offset + 6] + margin;
   };
 
+  // The bare ground: the paving at 0, or the floor of a sunken pit.
+  const groundHeightAt = (x, z) => {
+    for (let index = 0; index < groundHoles.length; index++) {
+      const hole = groundHoles[index];
+      if (x > hole.minX && x < hole.maxX && z > hole.minZ && z < hole.maxZ) return hole.floorY;
+    }
+    return 0;
+  };
+
   // Height of the highest surface under (x, z) that feet at footY can stand on (step up included).
   const supportHeightAt = (x, z, footY) => {
-    let support = 0;
+    let support = groundHeightAt(x, z);
     for (let index = 0; index < colliderCount; index++) {
       const offset = index * floatsPerCollider, top = colliders[offset + 8];
       if (top > support && top <= footY + maximumStepUpMetres && footprintContains(offset, x, z, 0)) support = top;

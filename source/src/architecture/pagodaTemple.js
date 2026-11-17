@@ -1,9 +1,10 @@
 // Assembles a complete Newar pagoda temple from the parts: stepped plinth with stair and guardians, brick
 // sanctum with carved doorways, the storeys above with latticed windows, and for every storey a tile roof
 // on carved struts with bells; finial and banner on top. Each pagoda monument file only supplies numbers.
-// Depends on plinths.js, brickWall.js, doorways.js, windows.js, roofStruts.js and pagodaRoof.js.
+// Depends on plinths.js, statues.js, brickWall.js, doorways.js, windows.js, roofStruts.js and pagodaRoof.js.
 
-import { addSteppedPlinth, addStairGuardians, addSeatedLion, addStoneElephant } from './plinths.js';
+import { addSteppedPlinth, addStairGuardians } from './plinths.js';
+import { addSeatedLion, addStoneElephant } from './statues.js';
 import { addBrickCore, onEachFace } from './brickWall.js';
 import { addCarvedDoorway } from './doorways.js';
 import { addLatticedWindow } from './windows.js';
@@ -23,8 +24,9 @@ const sideWindowWidthMetres = 0.9;
 //     first; strutDrop is how far below the eave the struts meet the wall,
 //   doorway: { width, height }, topRoofRise, finialHeight, patakaWidth
 // }
+// A tower rising out of the palace roof has no plinth and no doorway: give baseY (metres) instead.
 export function buildPagodaTemple(builder, solids, temple) {
-  const plinth = addSteppedPlinth(builder, solids, temple.plinth);
+  const plinth = temple.plinth ? addSteppedPlinth(builder, solids, temple.plinth) : { platformHeight: temple.baseY };
   if (temple.guardians) {
     addStairGuardians(builder, solids, {
       stairWidth: temple.plinth.stairWidth, plinth, pairCount: temple.guardians.pairCount,
@@ -36,12 +38,12 @@ export function buildPagodaTemple(builder, solids, temple) {
   const roofs = [];
   temple.storeys.forEach((storey, index) => {
     const isGroundFloor = index === 0, isTop = index === temple.storeys.length - 1;
-    const wallTop = addBrickCore(builder, isGroundFloor ? solids : [], {
+    const wallTop = addBrickCore(builder, isGroundFloor && temple.plinth ? solids : [], {
       halfDepth: storey.halfDepth, halfWidth: storey.halfWidth, bottom: y, height: storey.wallHeight, variant: 110 + index * 30,
     });
     // ground floor: a carved doorway on every face (the front one with a gilded torana); upper floors: windows
     onEachFace(builder, storey.halfDepth, storey.halfWidth, y, (faceName) => {
-      if (isGroundFloor) addCarvedDoorway(builder, { ...temple.doorway, isGilded: faceName === 'front' });
+      if (isGroundFloor && temple.doorway) addCarvedDoorway(builder, { ...temple.doorway, isGilded: faceName === 'front' });
       else {
         builder.translate(0, storey.wallHeight * 0.3, 0);
         addLatticedWindow(builder, { width: sideWindowWidthMetres, height: storey.wallHeight * 0.35 });
@@ -69,6 +71,6 @@ export function buildPagodaTemple(builder, solids, temple) {
 
   const peak = roofs[0].baseY + roofs[0].height;
   addGajur(builder, { y: peak - 0.05, height: temple.finialHeight });
-  addPataka(builder, roofs, { topY: peak - 0.2, widthMetres: temple.patakaWidth, bottomY: roofs[roofs.length - 1].baseY - 0.9 });
+  if (temple.patakaWidth) addPataka(builder, roofs, { topY: peak - 0.2, widthMetres: temple.patakaWidth, bottomY: roofs[roofs.length - 1].baseY - 0.9 });
   return { platformHeight: plinth.platformHeight, peak: peak + temple.finialHeight };
 }

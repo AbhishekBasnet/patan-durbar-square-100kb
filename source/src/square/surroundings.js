@@ -1,17 +1,22 @@
 // The ordinary Newar houses that close the square on every side: rows of narrow three- and four-storey
-// houses with tile roofs, broken by a few alleys that end in more houses, so the edge of the world is
-// never visible. Depends on layout.js (the bounds), blocks.js and math.js.
+// houses (shops on the ground floor, latticed windows above, tile roofs on struts), broken by a few alleys
+// that end in more houses, so the edge of the world is never visible.
+// Depends on layout.js (the bounds), blocks.js, newarBuilding.js, materials.js and math.js.
 
 import { squareBounds } from './layout.js';
-import { createBlock, rotationForFacing, blockColors } from './blocks.js';
+import { createBlock, placeInMonument, rotationForFacing } from './blocks.js';
+import { addNewarBuilding } from '../architecture/newarBuilding.js';
+import { material } from '../look/materials.js';
 import { createRandom } from '../core/math.js';
 
 const houseWidthMetres = [4, 7.5];
 const houseDepthMetres = [7, 10];
-const storeyHeightMetres = 2.6;
+const groundStoreyHeightMetres = [2.5, 3.0];
+const upperStoreyHeightMetres = [2.1, 2.5];
 const storeyCountRange = [3, 5]; // 3 or 4 storeys
-const roofHeightMetres = 1.9;
-const roofOverhangMetres = 0.7;
+const roofHeightMetres = 1.6;
+const roofOverhangMetres = 0.75;
+const shopShare = 0.6; // houses with a shop on the ground floor; the rest have a doorway
 const alleyBackHouseDistanceMetres = 9; // how far down an alley the closing house stands
 const plasteredHouseShare = 0.3;
 const frontSetbackMetres = [0, 1.4]; // house fronts jog in and out instead of forming one flat wall
@@ -28,33 +33,27 @@ const frontages = [
   { startX: east, startZ: north, endX: east, endZ: south, facingDegrees: 270, alleys: [] },
 ];
 
-function houseColor(random) {
-  if (random() < plasteredHouseShare) {
-    const fade = random.between(0.8, 1.05);
-    return blockColors.plaster.map((channel) => channel * fade);
-  }
-  const shade = random.between(0.75, 1.15);
-  return blockColors.brickWall.map((channel, index) => channel * shade * (index ? random.between(0.9, 1.1) : 1));
-}
-
-function addHouse(blocks, random, centreX, centreZ, facingDegrees, width, depth) {
+function addHouse(builder, solidBlocks, random, centreX, centreZ, facingDegrees, width, depth) {
   const storeyCount = Math.floor(random.between(...storeyCountRange));
-  const wallHeight = storeyCount * storeyHeightMetres + random.between(0, 0.6);
-  const rotation = rotationForFacing(facingDegrees);
-  blocks.push(createBlock({
-    x: centreX, z: centreZ, rotation, alongFront: depth, across: width, height: wallHeight,
-    color: houseColor(random), isSolid: true,
-  }));
-  // tile roof with its ridge running along the street
-  const roofShade = random.between(0.8, 1.2);
-  blocks.push(createBlock({
-    x: centreX, y: wallHeight, z: centreZ, rotation,
-    alongFront: depth + 2 * roofOverhangMetres, across: width + 0.2, height: roofHeightMetres,
-    topScaleAlongFront: 0.06, color: blockColors.roofTile.map((channel) => channel * roofShade),
-  }));
+  const storeyHeights = [random.between(...groundStoreyHeightMetres)];
+  for (let storey = 1; storey < storeyCount; storey++) storeyHeights.push(random.between(...upperStoreyHeightMetres));
+  const house = {
+    halfDepth: depth / 2, halfWidth: width / 2, storeyHeights,
+    wallMaterial: random() < plasteredHouseShare ? material.plaster : material.brick, variant: Math.floor(random.between(40, 220)),
+    detailedFaces: ['front'], groundFloor: random() < shopShare ? 'shop' : 'door', windowRowStorey: 2,
+    roofOverhang: roofOverhangMetres, roofHeight: roofHeightMetres, carvedStruts: false,
+  };
+  const localSolids = [];
+  builder.push().translate(centreX, 0, centreZ).rotateY(rotationForFacing(facingDegrees));
+  addNewarBuilding(builder, localSolids, house);
+  builder.pop();
+  const placement = { x: centreX, z: centreZ, facingDegrees };
+  for (const solid of localSolids) {
+    solidBlocks.push(placeInMonument(placement, solid.x, solid.z, createBlock({ y: solid.y, alongFront: solid.alongFront, across: solid.across, height: solid.height, isSolid: true })));
+  }
 }
 
-function addFrontage(blocks, random, frontage) {
+function addFrontage(builder, solidBlocks, random, frontage) {
   const lengthX = frontage.endX - frontage.startX, lengthZ = frontage.endZ - frontage.startZ;
   const length = Math.hypot(lengthX, lengthZ);
   const alongX = lengthX / length, alongZ = lengthZ / length;
@@ -65,7 +64,7 @@ function addFrontage(blocks, random, frontage) {
   const addRowHouse = (width) => {
     const depth = random.between(...houseDepthMetres);
     const middle = distance + width / 2, setback = random.between(...frontSetbackMetres);
-    addHouse(blocks, random, frontage.startX + alongX * middle + backX * (depth / 2 + setback),
+    addHouse(builder, solidBlocks, random, frontage.startX + alongX * middle + backX * (depth / 2 + setback),
       frontage.startZ + alongZ * middle + backZ * (depth / 2 + setback), frontage.facingDegrees, width, depth);
     distance += width;
   };
@@ -82,15 +81,16 @@ function addFrontage(blocks, random, frontage) {
     if (alleyStart - distance > 1) addRowHouse(alleyStart - distance);
     const gapCentre = alleyStart + alleyWidth / 2;
     const backDistance = alleyBackHouseDistanceMetres + houseDepthMetres[1] / 2;
-    addHouse(blocks, random, frontage.startX + alongX * gapCentre + backX * backDistance,
+    addHouse(builder, solidBlocks, random, frontage.startX + alongX * gapCentre + backX * backDistance,
       frontage.startZ + alongZ * gapCentre + backZ * backDistance, frontage.facingDegrees, alleyWidth + 6, houseDepthMetres[1]);
     distance = alleyStart + alleyWidth;
   }
 }
 
-export function buildSurroundings() {
-  const blocks = [];
+// Adds the houses to `builder` (world space) and returns their collision blocks.
+export function buildSurroundings(builder) {
+  const solidBlocks = [];
   const random = createRandom(surroundingsSeed);
-  for (const frontage of frontages) addFrontage(blocks, random, frontage);
-  return blocks;
+  for (const frontage of frontages) addFrontage(builder, solidBlocks, random, frontage);
+  return solidBlocks;
 }

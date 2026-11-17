@@ -11,19 +11,20 @@ const frameDepthMetres = 0.14;
 const frameMemberWidthMetres = 0.1;
 const lintelReachMetres = 0.18;
 
-export function addLatticedWindow(builder, { width, height }) {
+// frameMaterial: wood, or gilded for the palace's golden window.
+export function addLatticedWindow(builder, { width, height, frameMaterial = material.wood }) {
   const halfWidth = width / 2;
   builder.material(material.wood, 60, 2).occlusion(0.8);
   builder.addBox(-0.05, 0, -halfWidth, frameDepthMetres - latticeSetBackMetres, height, halfWidth);
-  addCarvedFrame(builder, { halfWidth, bottom: 0, top: height, depth: frameDepthMetres, memberWidth: frameMemberWidthMetres, reach: lintelReachMetres });
+  addCarvedFrame(builder, { halfWidth, bottom: 0, top: height, depth: frameDepthMetres, memberWidth: frameMemberWidthMetres, reach: lintelReachMetres, frameMaterial });
 }
 
 // A row of latticed bays under one long lintel (the palace's upper floors).
-export function addWindowRow(builder, { bayCount, bayWidth, height }) {
+export function addWindowRow(builder, { bayCount, bayWidth, height, frameMaterial }) {
   const totalWidth = bayCount * bayWidth;
   for (let bay = 0; bay < bayCount; bay++) {
     builder.push().translate(0, 0, -totalWidth / 2 + (bay + 0.5) * bayWidth);
-    addLatticedWindow(builder, { width: bayWidth - frameMemberWidthMetres * 2, height });
+    addLatticedWindow(builder, { width: bayWidth - frameMemberWidthMetres * 2, height, frameMaterial });
     builder.pop();
   }
 }
