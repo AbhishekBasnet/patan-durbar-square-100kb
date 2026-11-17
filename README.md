@@ -9,7 +9,7 @@ All of it is made by code: no images, no 3D models, no sound files. The whole sq
 
 ## Try it
 
-**Play it online:** [abhishekbasnet.github.io/patan-durbar-square-100kb](https://abhishekbasnet.github.io/patan-durbar-square-100kb/)
+**Play it online:** [patan-durbar-square-100kb.pages.dev](https://patan-durbar-square-100kb.pages.dev/) (also on [GitHub Pages](https://abhishekbasnet.github.io/patan-durbar-square-100kb/))
 
 Or download it:
 
