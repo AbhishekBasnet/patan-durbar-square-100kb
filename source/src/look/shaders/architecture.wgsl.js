@@ -10,6 +10,7 @@ import { woodWgsl } from './wood.wgsl.js';
 import { stoneWgsl } from './stone.wgsl.js';
 import { goldWgsl } from './gold.wgsl.js';
 import { tileWgsl } from './tile.wgsl.js';
+import { surfaceTexturesWgsl } from './surfaceTextures.wgsl.js';
 import { lightingWgsl } from './lighting.wgsl.js';
 import { material, materialTable } from '../materials.js';
 
@@ -17,7 +18,7 @@ import { material, materialTable } from '../materials.js';
 const materialConstants = materialTable.map(([red, green, blue, roughness, metalness, weathering]) =>
   `vec4f(${red},${green},${blue},${roughness}),vec4f(${metalness},${weathering},0,0)`).join(',');
 
-export const architectureWgsl = frameUniformsWgsl + noiseWgsl + brickWgsl + woodWgsl + stoneWgsl + goldWgsl + tileWgsl + lightingWgsl + /* wgsl */ `
+export const architectureWgsl = frameUniformsWgsl + noiseWgsl + surfaceTexturesWgsl + brickWgsl + woodWgsl + stoneWgsl + goldWgsl + tileWgsl + lightingWgsl + /* wgsl */ `
 const materialLooks = array<vec4f, ${materialTable.length * 2}>(${materialConstants});
 
 // Level-of-detail cross-fade (lod.js): one value per chunk and level, read through the draw's instance index.
@@ -69,6 +70,12 @@ struct ArchitectureVaryings {
   let baseColor = colorAndRoughness.rgb * tint;
   let weathering = metalnessAndWeathering.y;
   let coordinates = surfaceCoordinates(input.worldPosition, geometricNormal);
+  // screen-space slopes, taken here where every pixel of the quad runs the same code (the material switch
+  // below may not), so the surface patterns can pick their mipmap level
+  let coordinatesDx = dpdx(coordinates);
+  let coordinatesDy = dpdy(coordinates);
+  let positionDx = dpdx(input.worldPosition);
+  let positionDy = dpdy(input.worldPosition);
 
   var surface: SurfaceLook;
   surface.albedo = baseColor;
@@ -79,12 +86,12 @@ struct ArchitectureVaryings {
 
   switch materialId {
     case ${material.brick}u, ${material.glazedBrick}u: {
-      let brick = brickWall(coordinates, footprint, baseColor, weathering);
+      let brick = brickWall(coordinates, coordinatesDx, coordinatesDy, input.worldPosition.y, baseColor, weathering);
       surface.albedo = brick.albedo;
       surface.occlusion *= brick.cavity;
     }
     case ${material.paving}u: {
-      let paving = herringbonePaving(input.worldPosition.xz, footprint, baseColor);
+      let paving = herringbonePaving(input.worldPosition.xz, positionDx.xz, positionDy.xz, baseColor);
       surface.albedo = paving.albedo;
       surface.occlusion *= paving.cavity;
     }
@@ -98,7 +105,7 @@ struct ArchitectureVaryings {
       normal = normalize(geometricNormal + across * wood.bump.x + up * wood.bump.y);
     }
     case ${material.stone}u, ${material.carvedStone}u: {
-      let stone = weatheredStone(coordinates, footprint, baseColor, weathering, materialId == ${material.stone}u);
+      let stone = weatheredStone(coordinates, coordinatesDx, coordinatesDy, input.worldPosition.y, baseColor, weathering, materialId == ${material.stone}u);
       surface.albedo = stone.albedo;
       surface.occlusion *= stone.cavity;
     }
@@ -108,7 +115,7 @@ struct ArchitectureVaryings {
       surface.roughness = metal.roughness;
     }
     case ${material.roofTile}u: {
-      let tiles = mossyRoofTiles(input.worldPosition, coordinates, geometricNormal, footprint, baseColor, weathering);
+      let tiles = mossyRoofTiles(input.worldPosition, vec2f(coordinates.x, input.worldPosition.y), vec2f(coordinatesDx.x, positionDx.y), vec2f(coordinatesDy.x, positionDy.y), geometricNormal, baseColor, weathering);
       surface.albedo = tiles.albedo;
       surface.occlusion *= tiles.cavity;
     }

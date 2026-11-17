@@ -36,7 +36,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **89.3 KB** minified, 33.6 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **92.2 KB** minified, 34.8 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -74,9 +74,11 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/square/blocks.js` | Solid blocks for collision, placed relative to a monument |
 | `src/square/surroundings.js` | Two rows of mud houses beyond the square's invisible wall |
 | `src/look/lighting.js` | The golden-hour sun, sky and haze; the shadow and sky occlusion map matrices |
+| `src/look/surfaceTextures.js` | Paints brick, herringbone, stone-block and roof-tile patterns with mipmaps at load (no image files) |
 | `src/look/materials.js` | Named materials: colour, roughness, metalness, weathering |
 | `src/look/shaders/frameUniforms.wgsl.js` | Per-frame uniforms, haze, tone mapping |
 | `src/look/shaders/lighting.wgsl.js` | Sun shadows, sky occlusion under eaves, bounce light, highlights |
+| `src/look/shaders/surfaceTextures.wgsl.js` | Reads the painted patterns by distance and angle; large-scale weathering of walls |
 | `src/look/shaders/brick, wood, stone, gold, tile .wgsl.js` | One file per material look |
 | `src/look/shaders/architecture.wgsl.js` | Picks the material per vertex and lights it |
 | `src/look/shaders/water.wgsl.js` | The puddle and Manga Hiti's water: outlines, Fresnel reflections, steady rings where the streams land, foam, footstep ripples, wind, the spout streams |

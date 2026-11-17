@@ -8,6 +8,7 @@ import { skyWgsl } from '../look/shaders/sky.wgsl.js';
 import { architectureWgsl } from '../look/shaders/architecture.wgsl.js';
 import { waterWgsl, rippleEventCapacity, waveSourceCapacity } from '../look/shaders/water.wgsl.js';
 import { postProcessWgsl } from '../look/shaders/postProcess.wgsl.js';
+import { paintSurfaceTextures, surfaceTextureSize } from '../look/surfaceTextures.js';
 
 export const frameUniformFloatCount = 100; // matches FrameUniforms in frameUniforms.wgsl.js
 export const sunShadowMatrixOffset = 64;
@@ -49,6 +50,20 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const skyOcclusionMap = createDepthMap(quality.skyOcclusionMapSize);
   const comparisonSampler = device.createSampler({ compare: 'less-equal', magFilter: 'linear', minFilter: 'linear' });
 
+  // ---- the painted surface patterns (brick, paving, stone, tiles) with every mipmap level, filtered by angle too
+  const surfaceLevels = paintSurfaceTextures();
+  const surfacePatterns = device.createTexture({
+    size: [surfaceTextureSize, surfaceTextureSize, surfaceLevels[0].length], format: 'rgba8unorm', mipLevelCount: surfaceLevels.length,
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+  });
+  surfaceLevels.forEach((layers, level) => layers.forEach((pixels, layer) => {
+    const size = surfaceTextureSize >> level;
+    device.queue.writeTexture({ texture: surfacePatterns, mipLevel: level, origin: [0, 0, layer] }, pixels, { bytesPerRow: size * 4 }, [size, size, 1]);
+  }));
+  const surfacePatternSampler = device.createSampler({
+    addressModeU: 'repeat', addressModeV: 'repeat', magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'linear', maxAnisotropy: quality.surfaceAnisotropy,
+  });
+
   // ---- bind group 0: the frame uniforms and the light maps (scene passes), or the uniforms alone (map passes)
   const allStages = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
   const sceneBindGroupLayout = device.createBindGroupLayout({
@@ -58,6 +73,8 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
       { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+      { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { viewDimension: '2d-array' } },
+      { binding: 6, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
     ],
   });
   const uniformsOnlyBindGroupLayout = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: allStages, buffer: {} }] });
@@ -70,6 +87,8 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
       { binding: 2, resource: comparisonSampler },
       { binding: 3, resource: skyOcclusionMap.createView() },
       { binding: 4, resource: { buffer: fades } },
+      { binding: 5, resource: surfacePatterns.createView({ dimension: '2d-array' }) },
+      { binding: 6, resource: surfacePatternSampler },
     ],
   });
   // the camera's view, and the mirrored view drawn into the water reflection
