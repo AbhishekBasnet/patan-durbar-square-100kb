@@ -11,7 +11,6 @@ import { squareBounds, viewpoints } from './square/layout.js';
 import { buildSurroundings } from './square/surroundings.js';
 import { addPaving } from './square/paving.js';
 import { createWaterField } from './square/water.js';
-import { createStreetLife } from './life/streetLife.js';
 import { buildMonuments } from './monuments/allMonuments.js';
 import { MeshBuilder } from './core/meshBuilder.js';
 import { writeLightingUniforms, computeLightMapMatrices } from './look/lighting.js';
@@ -55,9 +54,8 @@ async function start() {
   const farDetailLevel = 2;
   const reflectionSelector = createDetailSelector({ chunkBounds, levelRanges, quality, fixedLevel: farDetailLevel });
   const waterField = createWaterField(quality);
-  const streetLife = createStreetLife(quality);
   const renderer = createRenderer({
-    device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, waterField, streetLife,
+    device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, waterField,
   });
   renderer.measureGpuTime = canMeasureGpuTime; // always on: the resolution scaler reads it
   const resolutionScaler = createResolutionScaler({ quality, renderer, canMeasureGpuTime });
@@ -168,7 +166,6 @@ async function start() {
       reflectionSelector.update(mirroredEye, mirroredViewProjection);
     }
     waterField.update(elapsedSeconds, camera);
-    streetLife.update(secondsElapsed, camera.eyePosition, detailSelector);
     if (!dev?.isBenchmarking()) resolutionScaler.update(frameMilliseconds);
     renderer.render(frameUniforms, reflectionUniforms, mirrorPlaneHeight);
     if (statsVisible) updateStats(frameMilliseconds);

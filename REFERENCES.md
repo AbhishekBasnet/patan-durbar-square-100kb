@@ -75,8 +75,4 @@ The palace wings use the same generator as the houses: storeys with glazed bands
 
 ## Street life
 
-The user chose to keep the square empty of people: pigeons only. There are no vendors, walking crowds, other animals, vehicles or sound.
-
-| Item | Based on | Notes |
-|---|---|---|
-| Pigeons | Every period photo of the square | Three flocks that take off when you come within 3.5 m and circle back down. |
+The user chose to keep the square quiet and empty: no people, vendors, animals, vehicles or sound.
