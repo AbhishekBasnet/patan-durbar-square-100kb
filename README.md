@@ -12,12 +12,13 @@ Open `index.html` in Chrome or Edge (it needs WebGPU), wait for the loading bar 
 |---|---|
 | `W` `A` `S` `D` | Walk |
 | Mouse | Look around |
-| `Shift` | Walk faster |
+| `Shift` | Walk 30% faster |
 | `Space` | Small hop |
 | `1`–`6` | Jump to a viewpoint |
 | `Esc` | Menu (detail level, controls) |
 | `H` | Performance stats |
 | `V` | Film look on / off |
+| `M` | Sound on / off |
 
 On a touchscreen, hold one finger down to walk and slide it to look around. A second finger walks faster.
 
@@ -35,7 +36,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **85.0 KB** minified, 31.9 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **87.8 KB** minified, 33.0 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -81,6 +82,8 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/look/shaders/water.wgsl.js` | The puddle and Manga Hiti's water: outlines, Fresnel reflections, steady rings where the streams land, foam, footstep ripples, wind, the spout streams |
 | `src/look/shaders/postProcess.wgsl.js` | The film look: warm faded 1980s colour, grain, vignette (V) |
 | `src/look/shaders/sky.wgsl.js`, `noise.wgsl.js` | Sky, shared noise |
+| `src/audio/ambientSounds.js` | Synthesized wind, bells and running water |
+| `src/audio/soundscape.js` | The mix: gusts, eave chimes, temple and Taleju bells, Manga Hiti's water placed in space |
 
 ## Easy first tweaks
 

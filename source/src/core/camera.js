@@ -8,8 +8,8 @@ import { clamp, degreesToRadians } from './math.js';
 const eyeHeightMetres = 1.6;
 const bodyHeightMetres = 1.75;
 const bodyRadiusMetres = 0.3;
-const walkingSpeedMetresPerSecond = 2.0; // easy first tweak: a relaxed stroll
-const fastWalkingSpeedMetresPerSecond = 4.5;
+const walkingSpeedMetresPerSecond = 4.5; // easy first tweak: a brisk walk
+const fastWalkingSpeedMetresPerSecond = walkingSpeedMetresPerSecond * 1.3; // Shift: 30% faster
 const accelerationRate = 10; // how quickly walking speed follows the keys, per second
 const maximumStepUpMetres = 0.5; // anything lower is a stair you walk up
 const gravityMetresPerSecondSquared = 9.8;

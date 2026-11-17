@@ -75,4 +75,4 @@ The palace wings use the same generator as the houses: storeys with glazed bands
 
 ## Street life
 
-The user chose to keep the square quiet and empty: no people, vendors, animals, vehicles or sound.
+The user chose to keep the square empty: no people, vendors, animals or vehicles. Sound is only wind, bells and water: a slow gusting wind, eave bells chiming in the gusts, an occasional temple bell and the deep Taleju bell, and Manga Hiti's running water.

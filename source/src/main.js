@@ -11,6 +11,7 @@ import { squareBounds, viewpoints } from './square/layout.js';
 import { buildSurroundings } from './square/surroundings.js';
 import { addPaving } from './square/paving.js';
 import { createWaterField } from './square/water.js';
+import { createSoundscape } from './audio/soundscape.js';
 import { buildMonuments } from './monuments/allMonuments.js';
 import { MeshBuilder } from './core/meshBuilder.js';
 import { writeLightingUniforms, computeLightMapMatrices } from './look/lighting.js';
@@ -54,6 +55,7 @@ async function start() {
   const farDetailLevel = 2;
   const reflectionSelector = createDetailSelector({ chunkBounds, levelRanges, quality, fixedLevel: farDetailLevel });
   const waterField = createWaterField(quality);
+  const soundscape = createSoundscape(camera);
   const renderer = createRenderer({
     device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector, reflectionSelector, waterField,
   });
@@ -85,7 +87,7 @@ async function start() {
       statsVisible = !statsVisible;
       statsLine.textContent = '';
     },
-    toggleSound: () => {}, // no sound in this version
+    toggleSound: () => soundscape.toggleMute(),
     toggleFilmLook: () => { renderer.filmLook = !renderer.filmLook; },
     openMenu: () => setMenuOpen(true),
     jumpToViewpoint,
@@ -166,6 +168,7 @@ async function start() {
       reflectionSelector.update(mirroredEye, mirroredViewProjection);
     }
     waterField.update(elapsedSeconds, camera);
+    soundscape.update(menuOpen ? 0 : secondsElapsed);
     if (!dev?.isBenchmarking()) resolutionScaler.update(frameMilliseconds);
     renderer.render(frameUniforms, reflectionUniforms, mirrorPlaneHeight);
     if (statsVisible) updateStats(frameMilliseconds);
@@ -183,6 +186,7 @@ async function start() {
     }
   };
   enterButton.onclick = () => {
+    soundscape.start(); // browsers allow sound only after a click
     enterButton.textContent = 'Resume';
     setMenuOpen(false);
     input.capturePointer();
