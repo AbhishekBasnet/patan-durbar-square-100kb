@@ -25,7 +25,8 @@ export async function openGpu() {
   return { adapter, device, canMeasureGpuTime };
 }
 
-export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices }) {
+// detailSelector (lod.js) says which chunks and levels to draw each frame, and with what cross-fade.
+export function createRenderer({ device, canMeasureGpuTime, canvas, quality, architectureVertexData, lightMapMatrices, detailSelector }) {
   const context = canvas.getContext('webgpu');
   const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
   const sampleCount = quality.antialiasingSamples;
@@ -52,8 +53,10 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'comparison' } },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+      { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
     ],
   });
+  const lodFadeBuffer = device.createBuffer({ size: Math.max(16, detailSelector.fades.byteLength), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
   const uniformsOnlyBindGroupLayout = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: allStages, buffer: {} }] });
   const uniformBuffer = createUniformBuffer();
   const sceneBindGroup = device.createBindGroup({
@@ -63,6 +66,7 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
       { binding: 1, resource: sunShadowMap.createView() },
       { binding: 2, resource: comparisonSampler },
       { binding: 3, resource: skyOcclusionMap.createView() },
+      { binding: 4, resource: { buffer: lodFadeBuffer } },
     ],
   });
   const scenePipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [sceneBindGroupLayout] });
@@ -71,10 +75,10 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   // ---- pipelines
   const modules = {};
   const shaderModule = (code) => (modules[code] ??= device.createShaderModule({ code }));
-  const createScenePipeline = (code, vertexEntry, fragmentEntry, buffers, depthStencil, cullMode = 'back') => device.createRenderPipeline({
+  const createScenePipeline = (code, vertexEntry, fragmentEntry, buffers, depthStencil, cullMode = 'back', constants = {}) => device.createRenderPipeline({
     layout: scenePipelineLayout,
     vertex: { module: shaderModule(code), entryPoint: vertexEntry, buffers },
-    fragment: { module: shaderModule(code), entryPoint: fragmentEntry, targets: [{ format: canvasFormat }] },
+    fragment: { module: shaderModule(code), entryPoint: fragmentEntry, targets: [{ format: canvasFormat }], constants },
     primitive: { topology: 'triangle-list', cullMode },
     depthStencil: { format: depthFormat, ...depthStencil },
     multisample: { count: sampleCount },
@@ -95,7 +99,9 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
     arrayStride: bytesPerVertex,
     attributes: [attribute(0, 0, 'float32x3'), attribute(1, 12, 'snorm8x4'), attribute(2, 16, 'uint8x4')],
   }];
-  const architecturePipeline = createScenePipeline(architectureWgsl, 'architectureVertex', 'architectureFragment', architectureBuffers, sceneDepth);
+  const architectureConstants = { shadowTapsPerAxis: quality.shadowTapsPerAxis, skyOcclusionTapCount: quality.skyOcclusionTapCount };
+  const architecturePipeline = createScenePipeline(architectureWgsl, 'architectureVertex', 'architectureFragment', architectureBuffers, sceneDepth, 'back', architectureConstants);
+  const crossFadingArchitecturePipeline = createScenePipeline(architectureWgsl, 'architectureVertex', 'architectureFragment', architectureBuffers, sceneDepth, 'back', { ...architectureConstants, isCrossFading: 1 });
   const architectureLightMapPipeline = createLightMapPipeline(architectureWgsl, 'architectureDepthVertex', [{
     arrayStride: bytesPerVertex, attributes: [attribute(0, 0, 'float32x3')],
   }]);
@@ -104,9 +110,21 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const architectureBuffer = createBufferWithData(architectureVertexData, GPUBufferUsage.VERTEX);
   const architectureVertexCount = architectureVertexData.byteLength / bytesPerVertex;
 
-  const drawArchitecture = (pass) => {
+  // light maps: everything at once
+  const drawAllArchitecture = (pass) => {
     pass.setVertexBuffer(0, architectureBuffer);
     pass.draw(architectureVertexCount);
+  };
+  // the scene: only the chunks and levels lod.js picked, nearest first; cross-fading ones with their own pipeline
+  const drawList = (pass, list, count) => {
+    for (let draw = 0; draw < count; draw++) pass.draw(list[draw * 3 + 1], 1, list[draw * 3], list[draw * 3 + 2]);
+  };
+  const drawVisibleArchitecture = (pass) => {
+    pass.setVertexBuffer(0, architectureBuffer);
+    pass.setPipeline(architecturePipeline);
+    drawList(pass, detailSelector.solidDraws, detailSelector.solidDrawCount);
+    pass.setPipeline(crossFadingArchitecturePipeline);
+    drawList(pass, detailSelector.fadingDraws, detailSelector.fadingDrawCount);
   };
 
   // ---- draw both light maps once: the sun and the scene never move
@@ -123,7 +141,7 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
     });
     pass.setBindGroup(0, bindGroup);
     pass.setPipeline(architectureLightMapPipeline);
-    drawArchitecture(pass);
+    drawAllArchitecture(pass);
     pass.end();
     device.queue.submit([encoder.finish()]);
   };
@@ -131,7 +149,8 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   drawLightMap(skyOcclusionMap, lightMapMatrices.skyOcclusionMatrix);
 
   // ---- GPU timing: two timestamps around the scene pass, read back through a small ring of buffers
-  const renderer = { gpuMilliseconds: 0, measureGpuTime: false, width: 0, height: 0 };
+  // renderScale: share of the preset's pixel budget, per side (lowered by quality.js when the GPU falls behind)
+  const renderer = { gpuMilliseconds: 0, measureGpuTime: false, width: 0, height: 0, renderScale: 1 };
   let timestampQuerySet, timestampResolveBuffer;
   const timestampReadbacks = [];
   if (canMeasureGpuTime) {
@@ -162,7 +181,7 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   renderer.resize = () => {
     const displayWidth = Math.max(2, Math.round(canvas.clientWidth * devicePixelRatio));
     const displayHeight = Math.max(2, Math.round(canvas.clientHeight * devicePixelRatio));
-    const scale = Math.min(1, Math.sqrt(quality.maximumRenderPixels / (displayWidth * displayHeight)));
+    const scale = Math.min(1, Math.sqrt(quality.maximumRenderPixels / (displayWidth * displayHeight))) * renderer.renderScale;
     const width = Math.max(2, Math.round(displayWidth * scale)), height = Math.max(2, Math.round(displayHeight * scale));
     if (width === renderer.width && height === renderer.height) return;
     renderer.width = canvas.width = width;
@@ -183,6 +202,7 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const commandBuffers = [null];
   renderer.render = (frameUniforms) => {
     device.queue.writeBuffer(uniformBuffer, 0, frameUniforms);
+    device.queue.writeBuffer(lodFadeBuffer, 0, detailSelector.fades);
     const canvasView = context.getCurrentTexture().createView();
     if (sampleCount > 1) colorAttachment.resolveTarget = canvasView;
     else colorAttachment.view = canvasView;
@@ -195,8 +215,7 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
     const pass = encoder.beginRenderPass(readback ? timedScenePass : scenePass);
     pass.setBindGroup(0, sceneBindGroup);
     // the buildings first, so the depth test skips hidden pixels; the sky fills what is left
-    pass.setPipeline(architecturePipeline);
-    drawArchitecture(pass);
+    drawVisibleArchitecture(pass);
     pass.setPipeline(skyPipeline);
     pass.draw(3);
     pass.end();

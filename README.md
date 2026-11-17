@@ -2,7 +2,7 @@
 
 A walkable recreation of Patan Durbar Square (Lalitpur, Nepal) as it was on an ordinary afternoon in the mid-1980s. It runs in the browser. Everything is made from code: no images, models or sound files. The whole square is one HTML file.
 
-> **Work in progress: step 3 of 7.** Every monument, the palace and the houses are built. Next: detail levels and performance tuning, then water, then street life.
+> **Work in progress: step 4 of 7.** Every monument, the palace and the houses are built, with detail levels by distance. It runs at a steady 60 fps on Medium on Intel Iris Xe (see [PERFORMANCE.md](PERFORMANCE.md)). Next: water, then street life.
 
 ## Try it
 
@@ -35,7 +35,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **66.6 KB** minified, 25.2 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **71.6 KB** minified, 27.2 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -52,7 +52,8 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/core/renderer.js` | WebGPU device, render targets, pipelines, frame drawing, GPU timing |
 | `src/core/camera.js` | Walking camera: eye height, head bob, hop, collision with steps and walls |
 | `src/core/input.js` | Keyboard, mouse and touch |
-| `src/core/quality.js` | High / Medium / Low presets and the first-visit pick |
+| `src/core/quality.js` | High / Medium / Low presets, the first-visit pick, automatic resolution scaling |
+| `src/core/lod.js` | Distance levels of detail per chunk, view culling, dithered cross-fades |
 | `src/architecture/plinths.js` | Stepped plinths with front stairs, and guardians placed beside them |
 | `src/architecture/statues.js` | Lions, elephants, Garuda, King Yoganarendra under the cobra hood, makara spouts |
 | `src/architecture/newarBuilding.js` | An ordinary Newar building: palace wings and every house |
@@ -85,6 +86,7 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | Sun colour | `goldenHourSunColor` in `src/look/lighting.js` |
 | Walking speed | `walkingSpeedMetresPerSecond` in `src/core/camera.js` |
 | Haze | `hazeDensityPerMetre` in `src/look/lighting.js` |
+| Detail switching distances | `lodSwitchDistances` in `src/core/lod.js` |
 | Move or turn a monument | its row (`x`, `z`, `facingDegrees`) in `src/square/layout.js` |
 
 Crowd size, number of vendors and film look strength arrive in later steps.
@@ -96,7 +98,7 @@ Crowd size, number of vendors and film look strength arrive in later steps.
 | 1. References, layout, walkable blockout | done |
 | 2. Lighting, paving, architecture parts (one pagoda, Krishna Mandir) | done |
 | 3. All monuments, palace, houses | done |
-| 4. Detail levels, performance on Medium | |
+| 4. Detail levels, performance on Medium | done |
 | 5. Puddles, Manga Hiti water | |
 | 6. People, vendors, animals, vehicles, sound | |
 | 7. Film look, polish, verification | |

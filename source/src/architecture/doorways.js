@@ -1,9 +1,10 @@
 // Carved Newar doorways: nested wooden frames with carved relief, the lintel and sill reaching out past the
 // jambs, closed dark door leaves, a stone threshold, and the semicircular torana above with its deity.
 // Built on a wall face at x = 0 looking along +x, bottom at y = 0. No interiors: the doors stay shut.
-// Depends on meshBuilder.js and materials.js.
+// Frames and the torana's figure are dropped far away (lod.js). Depends on meshBuilder.js, lod.js, materials.js.
 
 import { material } from '../look/materials.js';
+import { detailGroup } from '../core/lod.js';
 
 const frameCount = 3; // nested frames, each a step further out from the wall
 const frameMemberWidthMetres = 0.13;
@@ -36,9 +37,11 @@ export function addTorana(builder, { radius, y, isGilded }) {
   }
   // the deity: body and head in relief, under a little halo
   builder.material(isGilded ? material.gilded : material.wood, 190, 1);
-  builder.push().translate(toranaThicknessMetres, radius * 0.32, 0).scale(0.06, radius * 0.22, radius * 0.16).addSphere(6, 4).pop();
-  builder.push().translate(toranaThicknessMetres + 0.02, radius * 0.62, 0).scale(radius * 0.09).addSphere(6, 4).pop();
-  builder.push().translate(toranaThicknessMetres - 0.01, radius * 0.66, 0).scale(0.02, radius * 0.2, radius * 0.2).addSphere(8, 3).pop();
+  builder.withDetail(detailGroup.nearAndMiddle, () => {
+    builder.push().translate(toranaThicknessMetres, radius * 0.32, 0).scale(0.06, radius * 0.22, radius * 0.16).addSphere(6, 4).pop();
+    builder.push().translate(toranaThicknessMetres + 0.02, radius * 0.62, 0).scale(radius * 0.09).addSphere(6, 4).pop();
+    builder.push().translate(toranaThicknessMetres - 0.01, radius * 0.66, 0).scale(0.02, radius * 0.2, radius * 0.2).addSphere(8, 3).pop();
+  });
   builder.pop();
 }
 
@@ -52,14 +55,16 @@ export function addCarvedDoorway(builder, { width, height, hasTorana = true, isG
   builder.material(material.darkRecess).addBox(0.03, thresholdHeightMetres, -0.012, 0.035, height, 0.012);
   builder.material(material.stone, 150).occlusion(0.9);
   builder.addBox(0, 0, -halfWidth - 0.2, 0.32, thresholdHeightMetres, halfWidth + 0.2);
-  for (let frame = 0; frame < frameCount; frame++) {
-    const grow = frame * frameMemberWidthMetres;
-    addCarvedFrame(builder, {
-      halfWidth: halfWidth + grow, bottom: thresholdHeightMetres, top: height + grow,
-      depth: 0.05 + (frameCount - frame) * frameStepOutMetres, memberWidth: frameMemberWidthMetres,
-      reach: frame === frameCount - 1 ? lintelReachMetres : 0, frameMaterial,
-    });
-  }
+  builder.withDetail(detailGroup.nearAndMiddle, () => {
+    for (let frame = 0; frame < frameCount; frame++) {
+      const grow = frame * frameMemberWidthMetres;
+      addCarvedFrame(builder, {
+        halfWidth: halfWidth + grow, bottom: thresholdHeightMetres, top: height + grow,
+        depth: 0.05 + (frameCount - frame) * frameStepOutMetres, memberWidth: frameMemberWidthMetres,
+        reach: frame === frameCount - 1 ? lintelReachMetres : 0, frameMaterial,
+      });
+    }
+  });
   const outerTop = height + frameCount * frameMemberWidthMetres;
   if (hasTorana) addTorana(builder, { radius: halfWidth + 0.25, y: outerTop, isGilded });
   return outerTop + (hasTorana ? halfWidth + 0.25 : 0);

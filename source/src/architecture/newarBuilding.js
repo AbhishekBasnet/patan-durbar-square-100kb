@@ -2,9 +2,10 @@
 // plastered core of several storeys with glazed bands between them, a shop front or doorway on the ground
 // floor, small latticed windows and a wide window row on the floors above, and a tile roof on struts.
 // Only the faces you can see from the square get windows. Built in the frame of its centre, front toward +x.
-// Depends on brickWall.js, doorways.js, windows.js, roofStruts.js, pagodaRoof.js and materials.js.
+// Depends on brickWall.js, doorways.js, windows.js, roofStruts.js, pagodaRoof.js, lod.js and materials.js.
 
 import { material } from '../look/materials.js';
+import { detailGroup } from '../core/lod.js';
 import { addGlazedBand, onEachFace } from './brickWall.js';
 import { addCarvedDoorway } from './doorways.js';
 import { addLatticedWindow, addWindowRow } from './windows.js';
@@ -29,10 +30,12 @@ function addShopFront(builder, width, variant) {
   builder.addBox(0, 0, -halfWidth - 0.12, 0.12, 0.35, halfWidth + 0.12); // the raised sill people sit on
   builder.addBox(0, shopOpeningHeightMetres, -halfWidth - 0.12, 0.12, shopOpeningHeightMetres + 0.16, halfWidth + 0.12);
   const boardCount = Math.floor(width / shopShutterBoardMetres * 0.35);
-  for (let board = 0; board < boardCount; board++) {
-    const z = halfWidth - (board + 0.5) * shopShutterBoardMetres;
-    builder.addBox(0.0, 0.35, z - shopShutterBoardMetres / 2 + 0.01, 0.05, shopOpeningHeightMetres, z + shopShutterBoardMetres / 2 - 0.01);
-  }
+  builder.withDetail(detailGroup.nearAndMiddle, () => {
+    for (let board = 0; board < boardCount; board++) {
+      const z = halfWidth - (board + 0.5) * shopShutterBoardMetres;
+      builder.addBox(0.0, 0.35, z - shopShutterBoardMetres / 2 + 0.01, 0.05, shopOpeningHeightMetres, z + shopShutterBoardMetres / 2 - 0.01);
+    }
+  });
 }
 
 // One face's features, storey by storey. halfSpan: half the face's width.

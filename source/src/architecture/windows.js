@@ -1,9 +1,10 @@
 // Newar windows: latticed screens (the dark diagonal lattice is drawn by wood.wgsl.js) inside carved frames
 // whose lintels and sills reach out past the jambs, and the wide multi-bay windows of palace fronts.
 // Built on a wall face at x = 0 looking along +x, bottom of the opening at y = 0.
-// Depends on doorways.js (the shared frame) and materials.js.
+// Depends on doorways.js (the shared frame), lod.js and materials.js.
 
 import { material } from '../look/materials.js';
+import { detailGroup } from '../core/lod.js';
 import { addCarvedFrame } from './doorways.js';
 
 const latticeSetBackMetres = 0.04;
@@ -16,7 +17,10 @@ export function addLatticedWindow(builder, { width, height, frameMaterial = mate
   const halfWidth = width / 2;
   builder.material(material.wood, 60, 2).occlusion(0.8);
   builder.addBox(-0.05, 0, -halfWidth, frameDepthMetres - latticeSetBackMetres, height, halfWidth);
-  addCarvedFrame(builder, { halfWidth, bottom: 0, top: height, depth: frameDepthMetres, memberWidth: frameMemberWidthMetres, reach: lintelReachMetres, frameMaterial });
+  // far away only the dark lattice panel is left
+  builder.withDetail(detailGroup.nearAndMiddle, () => addCarvedFrame(builder, {
+    halfWidth, bottom: 0, top: height, depth: frameDepthMetres, memberWidth: frameMemberWidthMetres, reach: lintelReachMetres, frameMaterial,
+  }));
 }
 
 // A row of latticed bays under one long lintel (the palace's upper floors).

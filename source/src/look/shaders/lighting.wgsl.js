@@ -8,37 +8,42 @@ export const lightingWgsl = /* wgsl */ `
 @group(0) @binding(2) var shadowComparison: sampler_comparison;
 @group(0) @binding(3) var skyOcclusionMap: texture_depth_2d;
 
+// set per quality preset when the pipeline is made (quality.js)
+override shadowTapsPerAxis: i32 = 3; // 3 x 3 filtered taps on High, 2 x 2 on Medium, 1 on Low
+override skyOcclusionTapCount: i32 = 4;
+
 const shadowSoftnessTexels = 1.5;
 const skyOcclusionReachMetres = 1.2; // how far around a point we look for roofs overhead
 
-// Sun visibility from the shadow map, 3 x 3 filtered taps for a soft edge.
+// Sun visibility from the shadow map: a square of filtered taps for a soft edge.
 fn sunVisibility(worldPosition: vec3f, normal: vec3f) -> f32 {
   let lifted = worldPosition + normal * 0.04;
   let shadowPoint = frame.sunShadowMatrix * vec4f(lifted, 1.0);
   let mapUv = shadowPoint.xy * vec2f(0.5, -0.5) + 0.5;
   let texelSize = 1.0 / f32(textureDimensions(sunShadowMap).x);
   var visible = 0.0;
-  for (var tapY = -1; tapY <= 1; tapY++) {
-    for (var tapX = -1; tapX <= 1; tapX++) {
-      let offset = vec2f(f32(tapX), f32(tapY)) * texelSize * shadowSoftnessTexels;
+  let centre = f32(shadowTapsPerAxis - 1) * 0.5;
+  for (var tapY = 0; tapY < shadowTapsPerAxis; tapY++) {
+    for (var tapX = 0; tapX < shadowTapsPerAxis; tapX++) {
+      let offset = (vec2f(f32(tapX), f32(tapY)) - centre) * texelSize * shadowSoftnessTexels;
       visible += textureSampleCompareLevel(sunShadowMap, shadowComparison, mapUv + offset, shadowPoint.z - 0.0015);
     }
   }
-  return visible / 9.0;
+  return visible / f32(shadowTapsPerAxis * shadowTapsPerAxis);
 }
 
-// How much open sky a point sees: four taps of the top-down height map around it, pushed out along the
+// How much open sky a point sees: a few taps of the top-down height map around it, pushed out along the
 // normal so walls look past themselves. Under eaves and inside arcades this falls toward zero.
 fn skyVisibility(worldPosition: vec3f, normal: vec3f) -> f32 {
   let probe = worldPosition + normal * 0.45 + vec3f(0.0, 0.05, 0.0);
   var open = 0.0;
-  for (var tap = 0; tap < 4; tap++) {
-    let angle = f32(tap) * 1.5708 + 0.6;
+  for (var tap = 0; tap < skyOcclusionTapCount; tap++) {
+    let angle = f32(tap) * 6.2832 / f32(skyOcclusionTapCount) + 0.6;
     let samplePoint = probe + vec3f(cos(angle), 0.0, sin(angle)) * skyOcclusionReachMetres * 0.5;
     let mapPoint = frame.skyOcclusionMatrix * vec4f(samplePoint, 1.0);
     open += textureSampleCompareLevel(skyOcclusionMap, shadowComparison, mapPoint.xy * vec2f(0.5, -0.5) + 0.5, mapPoint.z);
   }
-  return mix(0.18, 1.0, open / 4.0);
+  return mix(0.18, 1.0, open / f32(skyOcclusionTapCount));
 }
 
 struct SurfaceLook {

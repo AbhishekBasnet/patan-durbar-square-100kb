@@ -1,8 +1,10 @@
 // Stepped temple plinths with a stair up the front, and the pairs of stone guardians (from statues.js) that sit
 // beside the stairs. Parts are built in the monument's own frame: centred on the origin, front toward +x.
-// Each solid piece is also listed in `solids` for walking collision. Depends on meshBuilder.js, materials.js.
+// Each solid piece is also listed in `solids` for walking collision. Guardians are dropped far away (lod.js).
+// Depends on meshBuilder.js, lod.js, materials.js.
 
 import { material } from '../look/materials.js';
+import { detailGroup } from '../core/lod.js';
 
 const stairRiseMetres = 0.21;
 const stairTreadMetres = 0.3;
@@ -56,7 +58,7 @@ export function addStairGuardians(builder, solids, { stairWidth, plinth, pairCou
       builder.push().translate(x, 0, z);
       builder.material(material.stone, 110).addCentredBox(guardianSizeMetres * 0.3, 0, pedestalTop, guardianSizeMetres * 0.22);
       builder.translate(0, pedestalTop, 0).scale(guardianSizeMetres);
-      addGuardian(builder);
+      builder.withDetail(detailGroup.nearAndMiddle, () => addGuardian(builder));
       builder.pop();
       addSolidBox(solids, x, z, guardianSizeMetres * 0.6, guardianSizeMetres * 0.44, 0, pedestalTop + guardianSizeMetres);
     }

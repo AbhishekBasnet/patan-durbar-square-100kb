@@ -1,9 +1,11 @@
 // Carved roof struts (tunala): the slanting wooden posts that hold up every eave, each carved with a
 // many-armed deity standing on a small attendant, under a leafy canopy. A strut of a given length is
-// carved once and then copied around every roof. Depends on meshBuilder.js and materials.js.
+// carved once and then copied around every roof; from further away a plain board stands in for it.
+// Depends on meshBuilder.js, lod.js and materials.js.
 
 import { MeshBuilder } from '../core/meshBuilder.js';
 import { material } from '../look/materials.js';
+import { detailGroup } from '../core/lod.js';
 
 const boardWidthMetres = 0.3;
 const boardThicknessMetres = 0.11;
@@ -71,15 +73,23 @@ export function addStrutsAlongWall(builder, { count, halfSpan, wallX, bottomY, e
   const strut = carveRoofStrut(length);
   for (let index = 0; index < count; index++) {
     const z = count === 1 ? 0 : -halfSpan + (index + 0.5) * (2 * halfSpan / count);
-    builder.push().translate(wallX, bottomY, z).rotateZ(-lean).addMesh(strut).pop();
+    builder.push().translate(wallX, bottomY, z).rotateZ(-lean);
+    // carved up close; from further away a plain board with carved relief drawn by the wood shader
+    builder.withDetail(detailGroup.nearOnly, () => builder.addMesh(strut));
+    builder.withDetail(detailGroup.middleAndFar, () => {
+      builder.material(material.wood, 70, 1).occlusion(0.75).addBox(-boardThicknessMetres, 0, -boardWidthMetres / 2, 0.06, length, boardWidthMetres / 2);
+    });
+    builder.pop();
   }
 }
 
 // Plain struts for ordinary houses: a square wooden post from the wall to the eave, no carving.
 export function addPlainStruts(builder, { count, halfSpan, bottomY, eaveX, topY }) {
   builder.material(material.wood, 40).occlusion(0.7);
-  for (let index = 0; index < count; index++) {
-    const z = count === 1 ? 0 : -halfSpan + (index + 0.5) * (2 * halfSpan / count);
-    builder.addTube([[0.06, bottomY, z], [eaveX, topY, z]], 0.06, 4);
-  }
+  builder.withDetail(detailGroup.nearAndMiddle, () => {
+    for (let index = 0; index < count; index++) {
+      const z = count === 1 ? 0 : -halfSpan + (index + 0.5) * (2 * halfSpan / count);
+      builder.addTube([[0.06, bottomY, z], [eaveX, topY, z]], 0.06, 4);
+    }
+  });
 }

@@ -23,7 +23,7 @@ function subtractRectangle(piece, hole) {
 
 export function addPaving(builder, groundHoles) {
   const { west, east, north, south } = squareBounds;
-  builder.material(material.paving, 128).occlusion(1);
+  builder.beginChunk().material(material.paving, 128).occlusion(1);
   for (let x = west - pavingMarginMetres; x < east + pavingMarginMetres; x += pavingTileMetres) {
     for (let z = north - pavingMarginMetres; z < south + pavingMarginMetres; z += pavingTileMetres) {
       let pieces = [{ minX: x, maxX: x + pavingTileMetres, minZ: z, maxZ: z + pavingTileMetres }];

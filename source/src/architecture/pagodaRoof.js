@@ -1,9 +1,11 @@
 // The tiered pagoda roof: one generator for every pagoda in the square. A hipped tile roof whose slope sags
 // gently and whose corners lift, a wooden fascia and a dark soffit with rafters under the eave, the gilded
 // finial (gajur), little bells along the eaves, and the long gilded banner (pataka) hanging down the front.
-// Built in the monument's frame, front toward +x. Depends on meshBuilder.js and materials.js.
+// Bells and rafters are near detail only (lod.js). Built in the monument's frame, front toward +x.
+// Depends on meshBuilder.js, lod.js and materials.js.
 
 import { material } from '../look/materials.js';
+import { detailGroup } from '../core/lod.js';
 
 const ringCount = 6; // rows of the roof surface from eave to top
 const edgeSegmentCount = 8; // pieces along each edge, so the corner lift curves smoothly
@@ -66,12 +68,14 @@ function addSoffit(builder, roof) {
   // rafters running out from the wall on the front and back (enough to read as rafters from below)
   builder.material(material.wood, 60).occlusion(0.45);
   const rafterCount = Math.floor(2 * roof.eaveHalfZ / rafterSpacingMetres);
-  for (let rafter = 0; rafter < rafterCount; rafter++) {
-    const z = -roof.eaveHalfZ + (rafter + 0.5) * rafterSpacingMetres;
-    for (const side of [-1, 1]) {
-      builder.addTube([[side * roof.wallHalfX, wallY - 0.06, z], [side * roof.eaveHalfX, y - 0.06, z]], 0.035, 4);
+  builder.withDetail(detailGroup.nearOnly, () => {
+    for (let rafter = 0; rafter < rafterCount; rafter++) {
+      const z = -roof.eaveHalfZ + (rafter + 0.5) * rafterSpacingMetres;
+      for (const side of [-1, 1]) {
+        builder.addTube([[side * roof.wallHalfX, wallY - 0.06, z], [side * roof.eaveHalfX, y - 0.06, z]], 0.035, 4);
+      }
     }
-  }
+  });
 }
 
 // Gilded finial (gajur): base plate, inverted lotus, bell-shaped body, umbrellas and a spike. `height` metres.
@@ -86,6 +90,10 @@ export function addGajur(builder, { y, height }) {
 
 // Small bronze bells hanging on chains along all four eaves, each with a gilded leaf as its clapper's sail.
 export function addEaveBells(builder, roof, spacingMetres) {
+  builder.withDetail(detailGroup.nearOnly, () => addEaveBellsAtAllLevels(builder, roof, spacingMetres));
+}
+
+function addEaveBellsAtAllLevels(builder, roof, spacingMetres) {
   const bellProfile = [[0.002, 0], [0.04, 0.01], [0.06, 0.05], [0.055, 0.1], [0.035, 0.15], [0.002, 0.16]]
     .map(([radius, profileY]) => [radius, profileY * bellHeightMetres / 0.16]);
   for (let side = 0; side < 4; side++) {

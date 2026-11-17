@@ -1,7 +1,10 @@
 // Geometry helpers that every architecture part, statue and prop is built from: a transform stack, boxes,
-// prisms, lathes (shapes turned around an axis), sweeps and quads, all written into one growing vertex list.
-// Vertex: position (3 floats), normal + baked ambient occlusion (4 snorm8), material id + variant (4 uint8).
-// Depends on nothing.
+// prisms, lathes (shapes turned around an axis), tubes and quads, all written into one growing vertex list.
+// Vertices are grouped into chunks (one per monument or house) and tagged with the detail levels they belong
+// to, for lod.js. Vertex: position (3 floats), normal + baked ambient occlusion (4 snorm8), material id +
+// variant + carving (4 uint8). Depends on lod.js (the detail groups).
+
+import { detailGroup, detailGroupCount } from './lod.js';
 
 export const bytesPerVertex = 20;
 
@@ -16,6 +19,24 @@ export class MeshBuilder {
     this.currentVariant = 0;
     this.currentCarving = 0;
     this.currentOcclusion = 1;
+    this.detailGroups = []; // per vertex
+    this.currentDetailGroup = detailGroup.allLevels;
+    this.chunkStarts = [];
+  }
+
+  // Starts a new chunk: everything added until the next call is culled and switches detail together.
+  beginChunk() {
+    this.chunkStarts.push(this.vertexCount);
+    return this;
+  }
+
+  // Adds what `build` makes only at the detail levels of `group` (see detailGroup in lod.js).
+  withDetail(group, build) {
+    const previous = this.currentDetailGroup;
+    this.currentDetailGroup = group;
+    build();
+    this.currentDetailGroup = previous;
+    return this;
   }
 
   get vertexCount() {
@@ -91,6 +112,7 @@ export class MeshBuilder {
     const length = Math.hypot(cofactorX, cofactorY, cofactorZ) || 1;
     this.normals.push(cofactorX / length, cofactorY / length, cofactorZ / length, this.currentOcclusion);
     this.materials.push(this.currentMaterial, this.currentVariant, this.currentCarving, 0);
+    this.detailGroups.push(this.currentDetailGroup);
   }
 
   // Mirroring transforms flip the winding; this keeps triangles facing outward.
@@ -212,7 +234,7 @@ export class MeshBuilder {
   }
 
   // Appends another builder's finished vertices through the current transform (for parts built once and
-  // placed many times, such as struts and bells).
+  // placed many times, such as struts). They take this builder's current detail group.
   addMesh(other) {
     const mirrored = this.isMirrored;
     for (let triangle = 0; triangle < other.vertexCount; triangle += 3) {
@@ -230,20 +252,47 @@ export class MeshBuilder {
     return this;
   }
 
-  // Packs everything into the GPU vertex format.
+  // Packs everything into the GPU vertex format, each chunk's triangles sorted by detail group, and returns
+  // per chunk its bounding sphere and the vertex range of each level (near, middle, far) for lod.js.
   toVertexData() {
     const data = new ArrayBuffer(this.vertexCount * bytesPerVertex);
     const floats = new Float32Array(data), signedBytes = new Int8Array(data), bytes = new Uint8Array(data);
-    for (let index = 0; index < this.vertexCount; index++) {
-      const floatOffset = index * bytesPerVertex / 4, byteOffset = index * bytesPerVertex;
-      floats[floatOffset] = this.positions[index * 3];
-      floats[floatOffset + 1] = this.positions[index * 3 + 1];
-      floats[floatOffset + 2] = this.positions[index * 3 + 2];
+    const chunkCount = this.chunkStarts.length;
+    const chunkBounds = new Float32Array(chunkCount * 4), levelRanges = new Uint32Array(chunkCount * 6);
+    let written = 0;
+    const writeVertex = (index) => {
+      const floatOffset = written * bytesPerVertex / 4, byteOffset = written * bytesPerVertex;
+      for (let axis = 0; axis < 3; axis++) floats[floatOffset + axis] = this.positions[index * 3 + axis];
       for (let component = 0; component < 4; component++) {
         signedBytes[byteOffset + 12 + component] = Math.round(Math.max(-1, Math.min(1, this.normals[index * 4 + component])) * 127);
         bytes[byteOffset + 16 + component] = this.materials[index * 4 + component];
       }
+      written++;
+    };
+    for (let chunk = 0; chunk < chunkCount; chunk++) {
+      const start = this.chunkStarts[chunk], end = chunk + 1 < chunkCount ? this.chunkStarts[chunk + 1] : this.vertexCount;
+      const groupCounts = new Array(detailGroupCount).fill(0);
+      for (let group = 0; group < detailGroupCount; group++) {
+        for (let index = start; index < end; index += 3) {
+          if (this.detailGroups[index] !== group) continue;
+          writeVertex(index); writeVertex(index + 1); writeVertex(index + 2);
+          groupCounts[group] += 3;
+        }
+      }
+      const runStart = (group) => start + groupCounts.slice(0, group).reduce((sum, count) => sum + count, 0);
+      const runLength = (first, last) => groupCounts.slice(first, last + 1).reduce((sum, count) => sum + count, 0);
+      levelRanges.set([runStart(0), runLength(0, 2), runStart(1), runLength(1, 3), runStart(2), runLength(2, 4)], chunk * 6);
+      // bounding sphere around the chunk's box
+      const low = [Infinity, Infinity, Infinity], high = [-Infinity, -Infinity, -Infinity];
+      for (let index = start; index < end; index++) {
+        for (let axis = 0; axis < 3; axis++) {
+          const value = this.positions[index * 3 + axis];
+          if (value < low[axis]) low[axis] = value;
+          if (value > high[axis]) high[axis] = value;
+        }
+      }
+      chunkBounds.set([(low[0] + high[0]) / 2, (low[1] + high[1]) / 2, (low[2] + high[2]) / 2, Math.hypot(high[0] - low[0], high[1] - low[1], high[2] - low[2]) / 2], chunk * 4);
     }
-    return data;
+    return { vertexData: data, chunkBounds, levelRanges };
   }
 }

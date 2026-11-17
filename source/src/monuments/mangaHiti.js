@@ -1,9 +1,10 @@
 // Manga Hiti: the sunken stone water spout at the north end, reached by a flight of steps, with three makara
 // heads on its back wall (their water arrives in step 5); and the two Mani Mandap pavilions beside it,
 // open wooden halls on raised stone platforms. The pit is listed in `holes` so the paving is cut away and
-// you can walk down into it. Depends on statues.js, plinths.js, pagodaRoof.js, roofStruts.js, materials.js.
+// you can walk down into it. Depends on statues.js, plinths.js, pagodaRoof.js, roofStruts.js, lod.js, materials.js.
 
 import { material } from '../look/materials.js';
+import { detailGroup } from '../core/lod.js';
 import { addMakaraSpout } from '../architecture/statues.js';
 import { addSteppedPlinth } from '../architecture/plinths.js';
 import { addPagodaRoof } from '../architecture/pagodaRoof.js';
@@ -60,7 +61,7 @@ export function buildMangaHiti(builder, solids, holes) {
   builder.material(material.stone, 90).occlusion(0.6).addBox(-pit.halfLength, floor, -3, -pit.halfLength + 0.6, floor + 0.4, 3);
   for (let spout = -1; spout <= 1; spout++) {
     builder.push().translate(-pit.halfLength, floor + pit.spoutHeightAboveFloor, spout * pit.spoutSpacing).scale(0.75);
-    addMakaraSpout(builder);
+    builder.withDetail(detailGroup.nearAndMiddle, () => addMakaraSpout(builder));
     builder.pop();
   }
 }

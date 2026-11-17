@@ -42,7 +42,6 @@ export function startDevTools({ camera, renderer, statsLine, getQualityName }) {
       isFlying = false;
       if (!isBenchmark) return;
       isBenchmark = false;
-      renderer.measureGpuTime = false;
       statsLine.textContent = `Walk-through ${renderer.width}x${renderer.height}, ${getQualityName()}, ${frameCount} frames\n`
         + `frame  ${summarize(frameLog, frameCount)}\n`
         + `GPU    ${gpuCount ? summarize(gpuLog, gpuCount) : 'timestamp queries unavailable'}`;
@@ -54,11 +53,17 @@ export function startDevTools({ camera, renderer, statsLine, getQualityName }) {
       isFlying = true;
       isBenchmark = event.code === 'KeyB';
       pathSeconds = frameCount = gpuCount = 0;
-      if (isBenchmark) { renderer.measureGpuTime = true; statsLine.textContent = 'Benchmark running…'; }
+      if (isBenchmark) {
+        // the benchmark measures at the full resolution of the preset
+        renderer.renderScale = 1;
+        renderer.resize();
+        statsLine.textContent = 'Benchmark running…';
+      }
     });
 
     return {
       isFlying: () => isFlying,
+      isBenchmarking: () => isBenchmark,
       update(secondsElapsed, frameMilliseconds) {
         if (!isFlying) return;
         pathSeconds += secondsElapsed;

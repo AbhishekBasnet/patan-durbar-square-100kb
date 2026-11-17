@@ -2,7 +2,8 @@
 // frame loop and the start menu. Depends on every core/ module, square/ and look/lighting.js.
 
 import { openGpu, createRenderer, frameUniformFloatCount, sunShadowMatrixOffset, skyOcclusionMatrixOffset } from './core/renderer.js';
-import { pickQuality, storeQuality, qualityNames } from './core/quality.js';
+import { pickQuality, storeQuality, qualityNames, createResolutionScaler } from './core/quality.js';
+import { createDetailSelector } from './core/lod.js';
 import { createInput } from './core/input.js';
 import { createWalkingCamera, buildColliders } from './core/camera.js';
 import { perspectiveReverseZ, viewFromYawPitch, multiplyMatrices, invertMatrix, degreesToRadians } from './core/math.js';
@@ -47,10 +48,11 @@ async function start() {
   const lightMapMatrices = computeLightMapMatrices();
 
   await showLoadingStep('Lighting the late afternoon…', 0.8);
-  const renderer = createRenderer({
-    device, canMeasureGpuTime, canvas, quality, lightMapMatrices,
-    architectureVertexData: architecture.toVertexData(),
-  });
+  const { vertexData, chunkBounds, levelRanges } = architecture.toVertexData();
+  const detailSelector = createDetailSelector({ chunkBounds, levelRanges, quality });
+  const renderer = createRenderer({ device, canMeasureGpuTime, canvas, quality, lightMapMatrices, architectureVertexData: vertexData, detailSelector });
+  renderer.measureGpuTime = canMeasureGpuTime; // always on: the resolution scaler reads it
+  const resolutionScaler = createResolutionScaler({ quality, renderer, canMeasureGpuTime });
   addEventListener('resize', renderer.resize);
 
   // ---- per-frame state, all preallocated
@@ -72,7 +74,6 @@ async function start() {
     onAnyInput: () => {},
     toggleStats: () => {
       statsVisible = !statsVisible;
-      renderer.measureGpuTime = statsVisible;
       statsLine.textContent = '';
     },
     toggleSound: () => {}, // sound arrives in step 6
@@ -104,7 +105,7 @@ async function start() {
     if (frameMilliseconds > statsWorstMilliseconds) statsWorstMilliseconds = frameMilliseconds;
     if (statsTimer < statsRefreshSeconds) return;
     const gpu = canMeasureGpuTime ? `GPU ${renderer.gpuMilliseconds.toFixed(2)} ms` : 'GPU time unavailable';
-    statsLine.textContent = `${Math.round(statsFrames / statsTimer)} fps · worst frame ${statsWorstMilliseconds.toFixed(1)} ms · ${gpu} · ${renderer.width}x${renderer.height} · ${quality.name}`;
+    statsLine.textContent = `${Math.round(statsFrames / statsTimer)} fps · worst frame ${statsWorstMilliseconds.toFixed(1)} ms · ${gpu} · ${renderer.width}x${renderer.height} (${Math.round(renderer.renderScale * 100)}%) · ${quality.name}`;
     statsTimer = statsFrames = statsWorstMilliseconds = 0;
   };
 
@@ -120,6 +121,8 @@ async function start() {
     if (!dev?.isFlying()) camera.update(menuOpen ? 0 : secondsElapsed, input);
     dev?.update(secondsElapsed, frameMilliseconds);
     writeCameraUniforms();
+    detailSelector.update(camera.eyePosition, viewProjection);
+    if (!dev?.isBenchmarking()) resolutionScaler.update(frameMilliseconds);
     renderer.render(frameUniforms);
     if (statsVisible) updateStats(frameMilliseconds);
   };

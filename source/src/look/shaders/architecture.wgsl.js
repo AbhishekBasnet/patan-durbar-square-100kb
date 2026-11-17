@@ -20,19 +20,29 @@ const materialConstants = materialTable.map(([red, green, blue, roughness, metal
 export const architectureWgsl = frameUniformsWgsl + noiseWgsl + brickWgsl + woodWgsl + stoneWgsl + goldWgsl + tileWgsl + lightingWgsl + /* wgsl */ `
 const materialLooks = array<vec4f, ${materialTable.length * 2}>(${materialConstants});
 
+// Level-of-detail cross-fade (lod.js): one value per chunk and level, read through the draw's instance index.
+@group(0) @binding(4) var<storage, read> lodFades: array<f32>;
+// Two pipelines are made from this shader: the cross-fading one dithers, the other never discards (a shader
+// that can discard loses early depth testing on some integrated GPUs, even when it never does).
+override isCrossFading: bool = false;
+const ditherMatrix = array<f32, 16>(0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+
 struct ArchitectureVaryings {
   @builtin(position) clipPosition: vec4f,
   @location(0) worldPosition: vec3f,
   @location(1) normalAndOcclusion: vec4f,
   @location(2) @interpolate(flat) materialData: vec4u, // id, variant, carving, spare
+  @location(3) @interpolate(flat) lodFade: f32,
 }
 
 @vertex fn architectureVertex(
   @location(0) position: vec3f,
   @location(1) normalAndOcclusion: vec4f,
   @location(2) materialData: vec4u,
+  @builtin(instance_index) drawSlot: u32,
 ) -> ArchitectureVaryings {
   var output: ArchitectureVaryings;
+  output.lodFade = lodFades[drawSlot];
   output.clipPosition = frame.viewProjection * vec4f(position, 1.0);
   output.worldPosition = position;
   output.normalAndOcclusion = normalAndOcclusion;
@@ -42,6 +52,10 @@ struct ArchitectureVaryings {
 
 @fragment fn architectureFragment(input: ArchitectureVaryings) -> @location(0) vec4f {
   let footprint = length(fwidth(input.worldPosition)); // metres covered by one pixel
+  // cross-fading between two detail levels: each keeps the pixels the other drops
+  let pixel = vec2u(input.clipPosition.xy) % 4u;
+  let ditherValue = (ditherMatrix[pixel.y * 4u + pixel.x] + 0.5) / 16.0;
+  if (isCrossFading && ((input.lodFade >= 0.0 && ditherValue >= input.lodFade) || (input.lodFade < 0.0 && ditherValue < -input.lodFade))) { discard; }
   let geometricNormal = normalize(input.normalAndOcclusion.xyz);
   let materialId = input.materialData.x;
   let variant = f32(input.materialData.y) / 255.0;

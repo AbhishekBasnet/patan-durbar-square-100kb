@@ -44,7 +44,7 @@ function addHouse(builder, solidBlocks, random, centreX, centreZ, facingDegrees,
     roofOverhang: roofOverhangMetres, roofHeight: roofHeightMetres, carvedStruts: false,
   };
   const localSolids = [];
-  builder.push().translate(centreX, 0, centreZ).rotateY(rotationForFacing(facingDegrees));
+  builder.beginChunk().push().translate(centreX, 0, centreZ).rotateY(rotationForFacing(facingDegrees));
   addNewarBuilding(builder, localSolids, house);
   builder.pop();
   const placement = { x: centreX, z: centreZ, facingDegrees };

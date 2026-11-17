@@ -52,7 +52,7 @@ export function buildMonuments(builder) {
   const solidBlocks = [], groundHoles = [];
   for (const row of monumentLayout) {
     const localSolids = [], localHoles = [];
-    builder.push().translate(row.x, 0, row.z).rotateY(rotationForFacing(row.facingDegrees));
+    builder.beginChunk().push().translate(row.x, 0, row.z).rotateY(rotationForFacing(row.facingDegrees));
     monumentBuilders[row.name](builder, localSolids, localHoles, row);
     builder.pop();
     for (const solid of localSolids) {

@@ -2,9 +2,10 @@
 // the Patan Museum): three courtyard blocks of brick with carved windows and struts facing the square.
 // Keshav Narayan Chowk (north) has the golden gate and golden window; Mul Chowk is in the middle; Sundari Chowk
 // (south) is open: you walk in through its gate to the courtyard and the sunken Tusha Hiti bath.
-// Built from newarBuilding.js. Depends on newarBuilding.js, doorways.js, windows.js, statues.js, materials.js.
+// Built from newarBuilding.js. Depends on newarBuilding.js, doorways.js, windows.js, statues.js, lod.js, materials.js.
 
 import { material } from '../look/materials.js';
+import { detailGroup } from '../core/lod.js';
 import { addNewarBuilding } from '../architecture/newarBuilding.js';
 import { addCarvedDoorway, addCarvedFrame } from '../architecture/doorways.js';
 import { addLatticedWindow } from '../architecture/windows.js';
@@ -89,6 +90,6 @@ function addTushaHiti(builder, solids, holes) {
     }
   }
   builder.push().translate(-floorHalf, floor + 0.7, 0).scale(0.6);
-  addMakaraSpout(builder);
+  builder.withDetail(detailGroup.nearAndMiddle, () => addMakaraSpout(builder));
   builder.pop();
 }
