@@ -1,9 +1,9 @@
 // The mix: starts Web Audio on the first click (browsers require a gesture), places each sound where it comes
-// from and moves the listener with the camera. The wind blows everywhere in slow gusts; the eave bells of the
-// temples chime more when it gusts; Manga Hiti's water grows as you come near and fills the pit when you walk
+// from and moves the listener with the camera. The wind blows everywhere in slow gusts; the small eave bells of
+// a temple ring only when you are near it, more often when it gusts; Manga Hiti's water grows as you come near and fills the pit when you walk
 // down into it. Sound is on by default and M toggles it. Depends on ambientSounds.js, layout.js and math.js.
 
-import { createNoiseBuffer, startWind, startRunningWater, strikeBell } from './ambientSounds.js';
+import { createNoiseBuffer, startWind, startRunningWater, strikeBell, strikeEaveBell } from './ambientSounds.js';
 import { monumentLayout } from '../square/layout.js';
 import { createRandom } from '../core/math.js';
 
@@ -11,9 +11,14 @@ const masterVolume = 1.0;
 const windGustSeconds = [11, 17]; // two slow cycles beating against each other
 const windCalmLevel = 0.12;
 const windGustLevel = 0.42;
-const eaveChimesPerSecond = [0.35, 1.8]; // in calm air, in a full gust
-const chimeNotesHertz = [2093, 2349, 2637, 3136, 3520]; // eave bells of slightly different sizes
-const chimeAudibleMetres = 18; // chimes stay clear across the square
+const eaveBellStrikesPerSecond = [0.25, 1.4]; // per nearby temple, in calm air and in a full gust
+const eaveBellHertz = [1250, 2300]; // small bells, each cast a little differently
+const eaveBellLoudness = 0.22;
+const eaveBellRadiusMetres = 4.5; // they hang around the eaves, this far from the temple's centre
+const eaveBellHeightMetres = 5;
+const eaveBellHearingMetres = 25; // beyond this a temple's little bells are not heard at all
+const clapperBounceChance = 0.35; // the clapper often taps the bell again, softer
+const clapperBounceSeconds = [0.06, 0.14];
 const templeBellEverySeconds = [9, 22];
 const talejuBellEverySeconds = [45, 100];
 const pitWaterBoost = 2.2; // down in the pit the water fills your ears
@@ -22,7 +27,7 @@ const templeNames = ['bhimsenTemple', 'vishwanathTemple', 'krishnaMandir', 'char
 export function createSoundscape(camera) {
   const random = createRandom(1990);
   const rows = Object.fromEntries(monumentLayout.map((row) => [row.name, row]));
-  let context = null, master, wind, water, isMuted = false, time = 0, nextTempleBell = 6, nextTalejuBell = 30;
+  let context = null, master, wind, water, noise, isMuted = false, time = 0, nextTempleBell = 6, nextTalejuBell = 30;
 
   const createPanner = (x, y, z, referenceDistance) => {
     const panner = context.createPanner();
@@ -33,6 +38,25 @@ export function createSoundscape(camera) {
     panner.positionX.value = x; panner.positionY.value = y; panner.positionZ.value = z;
     panner.connect(master);
     return panner;
+  };
+  // a little bell somewhere around a temple's eaves: loud close by, gone within eaveBellHearingMetres
+  const ringEaveBell = (row, loudness) => {
+    const angle = random() * 2 * Math.PI;
+    const panner = context.createPanner();
+    panner.panningModel = 'equalpower';
+    panner.distanceModel = 'linear';
+    panner.refDistance = 2;
+    panner.maxDistance = eaveBellHearingMetres;
+    panner.positionX.value = row.x + Math.cos(angle) * eaveBellRadiusMetres;
+    panner.positionY.value = eaveBellHeightMetres;
+    panner.positionZ.value = row.z + Math.sin(angle) * eaveBellRadiusMetres;
+    panner.connect(master);
+    const bell = { fundamental: random.between(eaveBellHertz[0], eaveBellHertz[1]), loudness };
+    strikeEaveBell(context, noise, panner, bell);
+    if (random() < clapperBounceChance) {
+      setTimeout(() => strikeEaveBell(context, noise, panner, { ...bell, loudness: loudness * 0.4 }), random.between(clapperBounceSeconds[0], clapperBounceSeconds[1]) * 1000);
+    }
+    setTimeout(() => panner.disconnect(), 2500);
   };
   const ringAt = (row, height, referenceDistance, bell) => {
     const panner = createPanner(row.x + random.between(-2, 2), height, row.z + random.between(-2, 2), referenceDistance);
@@ -47,7 +71,7 @@ export function createSoundscape(camera) {
       master = context.createGain();
       master.gain.value = isMuted ? 0 : masterVolume;
       master.connect(context.destination);
-      const noise = createNoiseBuffer(context);
+      noise = createNoiseBuffer(context);
       wind = startWind(context, noise, master);
       const pit = rows.mangaHiti;
       water = startRunningWater(context, noise, createPanner(pit.x - 5, -1.6, pit.z, 4));
@@ -66,16 +90,12 @@ export function createSoundscape(camera) {
       const gust = Math.max(0, 0.5 * Math.sin(time * 2 * Math.PI / windGustSeconds[0]) + 0.5 * Math.sin(time * 2 * Math.PI / windGustSeconds[1] + 1.3));
       wind.level.gain.setTargetAtTime(windCalmLevel + (windGustLevel - windCalmLevel) * gust, context.currentTime, 0.4);
       wind.filter.frequency.setTargetAtTime(280 + 500 * gust, context.currentTime, 0.4);
-      // the eave bells chime in little clusters, more often as the wind gusts
-      const chimeRate = eaveChimesPerSecond[0] + (eaveChimesPerSecond[1] - eaveChimesPerSecond[0]) * gust;
-      if (random() < chimeRate * secondsElapsed) {
-        const temple = rows[templeNames[Math.floor(random() * templeNames.length)]];
-        const noteCount = 2 + Math.floor(random() * 3);
-        for (let note = 0; note < noteCount; note++) {
-          setTimeout(() => ringAt(temple, 6, chimeAudibleMetres, {
-            fundamental: chimeNotesHertz[Math.floor(random() * chimeNotesHertz.length)], loudness: 0.18, decaySeconds: 1.8,
-          }), note * random.between(90, 260));
-        }
+      // the eave bells of each temple within earshot, swung by the wind: now and then in calm air, often in a gust
+      const strikeRate = eaveBellStrikesPerSecond[0] + (eaveBellStrikesPerSecond[1] - eaveBellStrikesPerSecond[0]) * gust;
+      for (let index = 0; index < templeNames.length; index++) {
+        const temple = rows[templeNames[index]];
+        if (Math.hypot(temple.x - eye[0], temple.z - eye[2]) > eaveBellHearingMetres) continue;
+        if (random() < strikeRate * secondsElapsed) ringEaveBell(temple, eaveBellLoudness * random.between(0.5, 1));
       }
       if (time > nextTempleBell) {
         nextTempleBell = time + random.between(...templeBellEverySeconds);

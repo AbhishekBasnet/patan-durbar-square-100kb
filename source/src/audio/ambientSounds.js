@@ -1,5 +1,5 @@
 // The square's sounds, synthesized live (no recordings): a slow wind that rises and falls in gusts, the small
-// bells under the temple eaves chiming in it, now and then a temple bell struck by a worshipper or the deep
+// bronze bells under the temple eaves struck by their wind-swung clappers, now and then a temple bell struck by a worshipper or the deep
 // Taleju bell, and the water running from Manga Hiti's spouts. Depends on nothing (Web Audio only).
 
 // One second of white noise, shared by the wind and the water.
@@ -57,4 +57,37 @@ export function strikeBell(context, output, { fundamental, loudness, decaySecond
     tone.start(start);
     tone.stop(start + decaySeconds * decayShare + 0.05);
   }
+}
+
+// A small eave bell struck once by its clapper: a tiny metallic click, then the ring of a small cast bronze
+// bell. Its partials are inharmonic (as on real small bells); each is doubled and slightly detuned, so it
+// shimmers; the higher ones die first.
+const eaveBellPartials = [[1, 1, 1.6], [2.32, 0.55, 0.9], [4.25, 0.3, 0.5], [6.63, 0.16, 0.28]]; // ratio, loudness, seconds
+const shimmerHertz = 1.6; // the slow beating of a slightly uneven casting
+const clapperClickSeconds = 0.012;
+const clapperClickHertz = 4500;
+
+export function strikeEaveBell(context, noise, output, { fundamental, loudness }) {
+  const start = context.currentTime;
+  for (const [ratio, share, decaySeconds] of eaveBellPartials) {
+    for (const detune of [-shimmerHertz / 2, shimmerHertz / 2]) {
+      const tone = context.createOscillator(), level = context.createGain();
+      tone.frequency.value = fundamental * ratio + detune * ratio;
+      level.gain.setValueAtTime(0, start);
+      level.gain.linearRampToValueAtTime(loudness * share * 0.5, start + 0.002);
+      level.gain.exponentialRampToValueAtTime(0.0001, start + decaySeconds);
+      tone.connect(level).connect(output);
+      tone.start(start);
+      tone.stop(start + decaySeconds + 0.05);
+    }
+  }
+  // the clapper's tap: a very short burst of bright noise
+  const click = context.createBufferSource(), clickFilter = context.createBiquadFilter(), clickLevel = context.createGain();
+  click.buffer = noise;
+  clickFilter.type = 'highpass';
+  clickFilter.frequency.value = clapperClickHertz;
+  clickLevel.gain.setValueAtTime(loudness * 0.6, start);
+  clickLevel.gain.exponentialRampToValueAtTime(0.0001, start + clapperClickSeconds);
+  click.connect(clickFilter).connect(clickLevel).connect(output);
+  click.start(start, Math.random() * 0.9, clapperClickSeconds);
 }
