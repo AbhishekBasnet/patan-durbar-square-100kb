@@ -1,5 +1,5 @@
 // The WebGPU renderer: opens the device, sizes the canvas within the preset's pixel budget, builds the sky,
-// architecture and water pipelines, draws the scene mirrored in the nearest water, draws the sun shadow map and sky occlusion map once at load, and draws
+// architecture and water pipelines, draws the scene mirrored in the nearest water, then the film look, draws the sun shadow map and sky occlusion map once at load, and draws
 // one frame per call. Optional GPU timestamps measure the frame for the H stats and the benchmark.
 // Depends on meshBuilder.js (vertex layout) and the WGSL in look/shaders/.
 
@@ -7,6 +7,7 @@ import { bytesPerVertex } from './meshBuilder.js';
 import { skyWgsl } from '../look/shaders/sky.wgsl.js';
 import { architectureWgsl } from '../look/shaders/architecture.wgsl.js';
 import { waterWgsl, rippleEventCapacity, waveSourceCapacity } from '../look/shaders/water.wgsl.js';
+import { postProcessWgsl } from '../look/shaders/postProcess.wgsl.js';
 
 export const frameUniformFloatCount = 100; // matches FrameUniforms in frameUniforms.wgsl.js
 export const sunShadowMatrixOffset = 64;
@@ -143,6 +144,19 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
   const reflectionSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
   let waterBindGroup; // rebuilt with the reflection image on resize
 
+  // the film look: the finished frame is drawn once more through postProcess.wgsl.js (not on Low)
+  const hasFilmLook = quality.hasFilmLook;
+  const postBindGroupLayout = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} }] });
+  const postPipeline = hasFilmLook && device.createRenderPipeline({
+    layout: device.createPipelineLayout({ bindGroupLayouts: [uniformsOnlyBindGroupLayout, postBindGroupLayout] }),
+    vertex: { module: shaderModule(postProcessWgsl), entryPoint: 'postVertex' },
+    fragment: { module: shaderModule(postProcessWgsl), entryPoint: 'postFragment', targets: [{ format: canvasFormat }] },
+  });
+  const postFrameBindGroup = device.createBindGroup({ layout: uniformsOnlyBindGroupLayout, entries: [{ binding: 0, resource: { buffer: uniformBuffer } }] });
+  const postColorAttachment = { view: null, loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] };
+  const postPass = { colorAttachments: [postColorAttachment] };
+  let finishedFrameTexture, finishedFrameView, postBindGroup; // rebuilt on resize
+
   const architectureLightMapPipeline = createLightMapPipeline(architectureWgsl, 'architectureDepthVertex', [{
     arrayStride: bytesPerVertex, attributes: [attribute(0, 0, 'float32x3')],
   }]);
@@ -200,7 +214,8 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
 
   // ---- GPU timing: two timestamps around the scene pass, read back through a small ring of buffers
   // renderScale: share of the preset's pixel budget, per side (lowered by quality.js when the GPU falls behind)
-  const renderer = { gpuMilliseconds: 0, measureGpuTime: false, width: 0, height: 0, renderScale: 1 };
+  // filmLook: V switches it; off (or on Low) the frame goes straight to the screen
+  const renderer = { gpuMilliseconds: 0, measureGpuTime: false, width: 0, height: 0, renderScale: 1, filmLook: true };
   let timestampQuerySet, timestampResolveBuffer;
   const timestampReadbacks = [];
   if (canMeasureGpuTime) {
@@ -249,6 +264,12 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
       colorAttachment.view = multisampleTexture.createView();
       colorAttachment.storeOp = 'discard';
     }
+    if (hasFilmLook) {
+      finishedFrameTexture?.destroy();
+      finishedFrameTexture = device.createTexture({ size: [width, height], format: canvasFormat, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+      finishedFrameView = finishedFrameTexture.createView();
+      postBindGroup = device.createBindGroup({ layout: postBindGroupLayout, entries: [{ binding: 0, resource: finishedFrameView }] });
+    }
     // the water reflection, at a share of the render size (a 1 x 1 stand-in on Low)
     reflectionTexture?.destroy();
     reflectionDepthTexture?.destroy();
@@ -283,8 +304,10 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
     waterUniforms[waterSettingsOffset + 3] = hasReflection && drawReflection ? 1 : 0;
     device.queue.writeBuffer(waterUniformBuffer, 0, waterUniforms);
     const canvasView = context.getCurrentTexture().createView();
-    if (sampleCount > 1) colorAttachment.resolveTarget = canvasView;
-    else colorAttachment.view = canvasView;
+    const withFilmLook = hasFilmLook && renderer.filmLook;
+    const sceneTarget = withFilmLook ? finishedFrameView : canvasView;
+    if (sampleCount > 1) colorAttachment.resolveTarget = sceneTarget;
+    else colorAttachment.view = sceneTarget;
 
     let readback = null;
     for (let index = 0; renderer.measureGpuTime && !readback && index < timestampReadbacks.length; index++) {
@@ -312,6 +335,15 @@ export function createRenderer({ device, canMeasureGpuTime, canvas, quality, arc
     pass.draw(3);
     drawWater(pass);
     pass.end();
+    if (withFilmLook) {
+      postColorAttachment.view = canvasView;
+      const filmPass = encoder.beginRenderPass(postPass);
+      filmPass.setPipeline(postPipeline);
+      filmPass.setBindGroup(0, postFrameBindGroup);
+      filmPass.setBindGroup(1, postBindGroup);
+      filmPass.draw(3);
+      filmPass.end();
+    }
     if (readback) {
       encoder.resolveQuerySet(timestampQuerySet, 0, 2, timestampResolveBuffer, 0);
       encoder.copyBufferToBuffer(timestampResolveBuffer, 0, readback.buffer, 0, 16);

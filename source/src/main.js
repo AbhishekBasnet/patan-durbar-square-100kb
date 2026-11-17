@@ -86,7 +86,7 @@ async function start() {
       statsLine.textContent = '';
     },
     toggleSound: () => {}, // no sound in this version
-    toggleFilmLook: () => {}, // the film look arrives in step 7
+    toggleFilmLook: () => { renderer.filmLook = !renderer.filmLook; },
     openMenu: () => setMenuOpen(true),
     jumpToViewpoint,
   });

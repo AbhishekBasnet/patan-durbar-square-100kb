@@ -15,6 +15,7 @@ export const qualityPresets = {
     skyOcclusionMapSize: 1024,
     shadowTapsPerAxis: 3,
     skyOcclusionTapCount: 4,
+    hasFilmLook: true,
     reflectionScale: 0.5, // water reflections at half the render size, per side
     rippleEventCapacity: 32,
   },
@@ -27,6 +28,7 @@ export const qualityPresets = {
     skyOcclusionMapSize: 1024,
     shadowTapsPerAxis: 3,
     skyOcclusionTapCount: 4,
+    hasFilmLook: true,
     reflectionScale: 0.33,
     rippleEventCapacity: 16,
   },
@@ -39,6 +41,7 @@ export const qualityPresets = {
     skyOcclusionMapSize: 512,
     shadowTapsPerAxis: 1,
     skyOcclusionTapCount: 2,
+    hasFilmLook: false, // no film grain pass
     reflectionScale: 0, // no reflection pass: water mirrors the sky and a tint of the buildings
     rippleEventCapacity: 8,
   },

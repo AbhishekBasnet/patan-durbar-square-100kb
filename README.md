@@ -17,7 +17,7 @@ Open `index.html` in Chrome or Edge (it needs WebGPU), wait for the loading bar 
 | `1`–`6` | Jump to a viewpoint |
 | `Esc` | Menu (detail level, controls) |
 | `H` | Performance stats |
-| `V` | Film look (coming in step 7) |
+| `V` | Film look on / off |
 
 On a touchscreen, hold one finger down to walk and slide it to look around. A second finger walks faster.
 
@@ -35,7 +35,7 @@ npm run build:dev      # ../dev.html, with F (scripted walk-through) and B (benc
 
 ## Size budget
 
-Hard limit: **150 KB** minified. Current size: **81.7 KB** minified, 30.9 KB gzipped.
+Hard limit: **150 KB** minified. Current size: **83.6 KB** minified, 31.4 KB gzipped.
 
 The build shortens every JS and WGSL name, so the readable names in the source cost nothing in the output.
 
@@ -78,6 +78,7 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | `src/look/shaders/brick, wood, stone, gold, tile .wgsl.js` | One file per material look |
 | `src/look/shaders/architecture.wgsl.js` | Picks the material per vertex and lights it |
 | `src/look/shaders/water.wgsl.js` | The puddle and Manga Hiti's water: outlines, Fresnel reflections, steady rings where the streams land, foam, footstep ripples, wind, the spout streams |
+| `src/look/shaders/postProcess.wgsl.js` | The film look: warm faded 1980s colour, grain, vignette (V) |
 | `src/look/shaders/sky.wgsl.js`, `noise.wgsl.js` | Sky, shared noise |
 
 ## Easy first tweaks
@@ -92,8 +93,7 @@ The build shortens every JS and WGSL name, so the readable names in the source c
 | Detail switching distances | `lodSwitchDistances` in `src/core/lod.js` |
 | Move or turn a monument | its row (`x`, `z`, `facingDegrees`) in `src/square/layout.js` |
 
-
-Film look strength arrives in step 7.
+| Film look strength | `filmLookStrength` in `src/look/shaders/postProcess.wgsl.js` (0 none, 1 full) |
 
 ## Status
 
